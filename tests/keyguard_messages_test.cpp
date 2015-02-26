@@ -30,6 +30,8 @@ using ::keyguard::VerifyResponse;
 using std::cout;
 using std::endl;
 
+static const uint32_t USER_ID = 3857;
+
 static SizedBuffer *make_buffer(size_t size) {
     SizedBuffer *result = new SizedBuffer;
     result->length = size;
@@ -49,7 +51,7 @@ TEST(RoundTripTest, EnrollRequest) {
     SizedBuffer *provided_password = make_buffer(password_size);
     const SizedBuffer *deserialized_password;
     // create request, serialize, deserialize, and validate
-    EnrollRequest req(provided_password);
+    EnrollRequest req(USER_ID, provided_password);
     uint8_t *serialized_req = req.Serialize();
     EnrollRequest deserialized_req;
     deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
@@ -59,6 +61,7 @@ TEST(RoundTripTest, EnrollRequest) {
             deserialized_req.GetError());
 
     deserialized_password = deserialized_req.GetProvidedPassword();
+    ASSERT_EQ(USER_ID, deserialized_req.GetUserId());
     ASSERT_EQ((uint32_t) password_size, deserialized_password->length);
     ASSERT_EQ(0, memcmp(req.GetProvidedPassword()->buffer.get(), deserialized_password->buffer.get(), password_size));
 }
@@ -68,7 +71,7 @@ TEST(RoundTripTest, EnrollResponse) {
     SizedBuffer *enrolled_password = make_buffer(password_size);
     const SizedBuffer *deserialized_password;
     // create request, serialize, deserialize, and validate
-    EnrollResponse req(enrolled_password);
+    EnrollResponse req(USER_ID, enrolled_password);
     uint8_t *serialized_req = req.Serialize();
     EnrollResponse deserialized_req;
     deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
@@ -78,17 +81,18 @@ TEST(RoundTripTest, EnrollResponse) {
             deserialized_req.GetError());
 
     deserialized_password = deserialized_req.GetEnrolledPasswordHandle();
+    ASSERT_EQ(USER_ID, deserialized_req.GetUserId());
     ASSERT_EQ((uint32_t) password_size, deserialized_password->length);
     ASSERT_EQ(0, memcmp(req.GetEnrolledPasswordHandle()->buffer.get(), deserialized_password->buffer.get(), password_size));
 }
 
 TEST(RoundTripTest, VerifyRequest) {
-    const size_t password_size = 1;
+    const size_t password_size = 512;
     SizedBuffer *provided_password = make_buffer(password_size),
           *password_handle = make_buffer(password_size);
     const SizedBuffer *deserialized_password;
     // create request, serialize, deserialize, and validate
-    VerifyRequest req(password_handle, provided_password);
+    VerifyRequest req(USER_ID, password_handle, provided_password);
     uint8_t *serialized_req = req.Serialize();
     VerifyRequest deserialized_req;
     deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
@@ -96,6 +100,7 @@ TEST(RoundTripTest, VerifyRequest) {
     ASSERT_EQ(keyguard::keyguard_error_t::KG_ERROR_OK,
             deserialized_req.GetError());
 
+    ASSERT_EQ(USER_ID, deserialized_req.GetUserId());
     deserialized_password = deserialized_req.GetProvidedPassword();
     ASSERT_EQ((uint32_t) password_size, deserialized_password->length);
     ASSERT_EQ(0, memcmp(req.GetProvidedPassword()->buffer.get(), deserialized_password->buffer.get(), password_size));
@@ -110,7 +115,7 @@ TEST(RoundTripTest, VerifyResponse) {
     SizedBuffer *verification_token = make_buffer(password_size);
     const SizedBuffer *deserialized_password;
     // create request, serialize, deserialize, and validate
-    VerifyResponse req(verification_token);
+    VerifyResponse req(USER_ID, verification_token);
     uint8_t *serialized_req = req.Serialize();
     VerifyResponse deserialized_req;
     deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
@@ -119,6 +124,7 @@ TEST(RoundTripTest, VerifyResponse) {
     ASSERT_EQ(keyguard::keyguard_error_t::KG_ERROR_OK,
             deserialized_req.GetError());
 
+    ASSERT_EQ(USER_ID, deserialized_req.GetUserId());
     deserialized_password = deserialized_req.GetVerificationToken();
     ASSERT_EQ((uint32_t) password_size, deserialized_password->length);
     ASSERT_EQ(0, memcmp(req.GetVerificationToken()->buffer.get(), deserialized_password->buffer.get(), password_size));

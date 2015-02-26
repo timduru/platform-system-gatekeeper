@@ -13,34 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- *
- * TODO(anmorales): figure out a reasonable max buffer size
  */
 
 #include <keyguard/keyguard_messages.h>
 
 #include <string.h>
 
+
 namespace keyguard {
 
 /**
- * Variant of memset() that uses GCC-specific pragmas to disable optimizations, so effect is not
- * optimized away.  This is important because we often need to wipe blocks of sensitive data from
- * memory.  As an additional convenience, this implementation avoids writing to NULL pointers.
+ * Methods for serializing/deserializing SizedBuffers
  */
-#ifdef __clang__
-#define OPTNONE __attribute__((optnone))
-#else  // not __clang__
-#define OPTNONE __attribute__((optimize("O0")))
-#endif  // not __clang__
-inline OPTNONE void* memset_s(void* s, int c, size_t n) {
-    if (!s)
-        return s;
-    return memset(s, c, n);
-}
-#undef OPTNONE
 
-static inline size_t buffer_size(const SizedBuffer &buf) {
+static inline size_t serialized_buffer_size(const SizedBuffer &buf) {
     return sizeof(uint32_t) + buf.length;
 }
 
@@ -66,9 +52,10 @@ static inline keyguard_error_t read_from_buffer(const uint8_t **buffer, const ui
     return KG_ERROR_OK;
 }
 
+
 size_t KeyguardMessage::GetSerializedSize() const {
     if (error_ == KG_ERROR_OK) {
-        return sizeof(uint32_t) + nonErrorSerializedSize();
+        return 2 * sizeof(uint32_t) + nonErrorSerializedSize();
     } else {
         return sizeof(uint32_t);
     }
@@ -80,10 +67,11 @@ uint8_t *KeyguardMessage::Serialize() const {
         *error_buf = static_cast<uint32_t>(error_);
         return reinterpret_cast<uint8_t *>(error_buf);
     } else {
-        uint8_t *buf = new uint8_t[sizeof(uint32_t) + nonErrorSerializedSize()];
+        uint8_t *buf = new uint8_t[2*sizeof(uint32_t) + nonErrorSerializedSize()];
         uint32_t error_value = static_cast<uint32_t>(error_);
         memcpy(buf, &error_value, sizeof(uint32_t));
-        nonErrorSerialize(buf + sizeof(uint32_t));
+        memcpy(buf + sizeof(uint32_t), &user_id_, sizeof(user_id_));
+        nonErrorSerialize(buf + 2*sizeof(uint32_t));
         return buf;
     }
 }
@@ -93,7 +81,10 @@ keyguard_error_t KeyguardMessage::Deserialize(const uint8_t *payload, const uint
     if (payload + sizeof(uint32_t) > end) return KG_ERROR_INVALID;
     memcpy(&error_value, payload, sizeof(uint32_t));
     error_ = static_cast<keyguard_error_t>(error_value);
+    payload += sizeof(uint32_t);
     if (error_ == KG_ERROR_OK) {
+        if (payload == end) return KG_ERROR_INVALID;
+        user_id_ = *((uint32_t *) payload);
         error_ = nonErrorDeserialize(payload + sizeof(uint32_t), end);
     }
 
@@ -101,8 +92,9 @@ keyguard_error_t KeyguardMessage::Deserialize(const uint8_t *payload, const uint
 }
 
 
-VerifyRequest::VerifyRequest(SizedBuffer *enrolled_password_handle,
+VerifyRequest::VerifyRequest(uint32_t user_id, SizedBuffer *enrolled_password_handle,
         SizedBuffer *provided_password_payload) {
+    user_id_ = user_id;
     password_handle_.buffer = std::move(enrolled_password_handle->buffer);
     password_handle_.length = enrolled_password_handle->length;
     provided_password_.buffer = std::move(provided_password_payload->buffer);
@@ -126,7 +118,7 @@ VerifyRequest::~VerifyRequest() {
 }
 
 size_t VerifyRequest::nonErrorSerializedSize() const {
-    return buffer_size(password_handle_) + buffer_size(provided_password_);
+    return serialized_buffer_size(password_handle_) + serialized_buffer_size(provided_password_);
 }
 
 void VerifyRequest::nonErrorSerialize(uint8_t *buffer) const {
@@ -153,7 +145,8 @@ keyguard_error_t VerifyRequest::nonErrorDeserialize(const uint8_t *payload, cons
 
 }
 
-VerifyResponse::VerifyResponse(SizedBuffer *verification_token) {
+VerifyResponse::VerifyResponse(uint32_t user_id, SizedBuffer *verification_token) {
+    user_id_ = user_id;
     verification_token_.buffer = std::move(verification_token->buffer);
     verification_token_.length = verification_token->length;
 }
@@ -168,8 +161,13 @@ VerifyResponse::~VerifyResponse() {
     }
 }
 
+void VerifyResponse::SetVerificationToken(SizedBuffer *verification_token) {
+    verification_token_.buffer = std::move(verification_token->buffer);
+    verification_token_.length = verification_token->length;
+}
+
 size_t VerifyResponse::nonErrorSerializedSize() const {
-    return buffer_size(verification_token_);
+    return serialized_buffer_size(verification_token_);
 }
 
 void VerifyResponse::nonErrorSerialize(uint8_t *buffer) const {
@@ -184,7 +182,8 @@ keyguard_error_t VerifyResponse::nonErrorDeserialize(const uint8_t *payload, con
     return read_from_buffer(&payload, end, &verification_token_);
 }
 
-EnrollRequest::EnrollRequest(SizedBuffer *provided_password) {
+EnrollRequest::EnrollRequest(uint32_t user_id, SizedBuffer *provided_password) {
+    user_id_ = user_id;
     provided_password_.buffer = std::move(provided_password->buffer);
     provided_password_.length = provided_password->length;
 }
@@ -201,7 +200,7 @@ EnrollRequest::~EnrollRequest() {
 }
 
 size_t EnrollRequest::nonErrorSerializedSize() const {
-   return buffer_size(provided_password_);
+   return serialized_buffer_size(provided_password_);
 }
 
 void EnrollRequest::nonErrorSerialize(uint8_t *buffer) const {
@@ -217,7 +216,8 @@ keyguard_error_t EnrollRequest::nonErrorDeserialize(const uint8_t *payload, cons
     return read_from_buffer(&payload, end, &provided_password_);
 }
 
-EnrollResponse::EnrollResponse(SizedBuffer *enrolled_password_handle) {
+EnrollResponse::EnrollResponse(uint32_t user_id, SizedBuffer *enrolled_password_handle) {
+    user_id_ = user_id;
     enrolled_password_handle_.buffer = std::move(enrolled_password_handle->buffer);
     enrolled_password_handle_.length = enrolled_password_handle->length;
 }
@@ -232,8 +232,13 @@ EnrollResponse::~EnrollResponse() {
     }
 }
 
+void EnrollResponse::SetEnrolledPasswordHandle(SizedBuffer *enrolled_password_handle) {
+    enrolled_password_handle_.buffer = std::move(enrolled_password_handle->buffer);
+    enrolled_password_handle_.length = enrolled_password_handle->length;
+}
+
 size_t EnrollResponse::nonErrorSerializedSize() const {
-    return buffer_size(enrolled_password_handle_);
+    return serialized_buffer_size(enrolled_password_handle_);
 }
 
 void EnrollResponse::nonErrorSerialize(uint8_t *buffer) const {

@@ -15,12 +15,14 @@
 LOCAL_PATH := $(call my-dir)
 
 ###
-# libkeyguard_messages contains just the code necessary to communicate with a
+# libkeyguard contains just the code necessary to communicate with a
 # GoogleKeyguard implementation, e.g. one running in TrustZone.
 ##
 include $(CLEAR_VARS)
-LOCAL_MODULE:= libkeyguard_messages
-LOCAL_SRC_FILES:= keyguard_messages.cpp
+LOCAL_MODULE:= libkeyguard
+LOCAL_SRC_FILES := \
+	keyguard_messages.cpp \
+	google_keyguard.cpp
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include
 LOCAL_CFLAGS = -Wall -Werror
