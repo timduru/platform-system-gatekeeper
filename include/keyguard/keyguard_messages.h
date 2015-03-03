@@ -16,10 +16,11 @@
 #ifndef KEYGUARD_MESSAGES_H_
 #define KEYGUARD_MESSAGES_H_
 
-#include <memory>
 #include <stdint.h>
+#include <UniquePtr.h>
 
-#include "google_keyguard_utils.h"
+
+#include "keyguard_utils.h"
 /**
  * Message serialization objects for communicating with the hardware keyguard.
  */
@@ -30,20 +31,27 @@ typedef enum {
     KG_ERROR_INVALID = 1,
 } keyguard_error_t;
 
-typedef struct {
-    std::unique_ptr<uint8_t> buffer;
+struct SizedBuffer {
+    SizedBuffer() {
+        length = 0;
+    }
+    SizedBuffer(uint8_t *buf, size_t len) {
+        buffer.reset(buf);
+        length = len;
+    }
+
+    UniquePtr<uint8_t> buffer;
     size_t length;
-} SizedBuffer;
+};
 
 /*
  * Abstract base class of all message objects. Handles serialization of common
  * elements like the error and user ID. Delegates specialized serialization
  * to protected pure virtual functions implemented by subclasses.
  */
-class KeyguardMessage {
-public:
-    KeyguardMessage() : error_(KG_ERROR_OK) {}
-    KeyguardMessage(keyguard_error_t error) : error_(error) {}
+struct KeyguardMessage {
+    KeyguardMessage() : error(KG_ERROR_OK) {}
+    KeyguardMessage(keyguard_error_t error) : error(error) {}
     virtual ~KeyguardMessage() {}
 
     /**
@@ -63,11 +71,6 @@ public:
      */
     keyguard_error_t Deserialize(const uint8_t *payload, const uint8_t *end);
 
-    keyguard_error_t GetError() const { return error_; }
-    void SetError(const keyguard_error_t error) { error_ = error; }
-    uint32_t GetUserId() const { return user_id_; }
-
-protected:
     /**
      * The following methods are intended to be implemented by subclasses.
      * They are hooks to serialize the elements specific to each particular
@@ -84,21 +87,20 @@ protected:
      * the subclass specific data into it. The size of the buffer is exaclty
      * that returned by nonErrorSerializedSize() in bytes.
      */
-    virtual void nonErrorSerialize(uint8_t *buffer) const { }
+    virtual void nonErrorSerialize(uint8_t *) const { }
 
     /**
      * Deserializes subclass specific data from payload without reading past end.
      */
-    virtual keyguard_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end) {
+    virtual keyguard_error_t nonErrorDeserialize(const uint8_t *, const uint8_t *) {
         return KG_ERROR_OK;
     }
 
-    keyguard_error_t error_;
-    uint32_t user_id_;
+    keyguard_error_t error;
+    uint32_t user_id;
 };
 
-class VerifyRequest : public KeyguardMessage {
-public:
+struct VerifyRequest : public KeyguardMessage {
     VerifyRequest(
             uint32_t user_id,
             SizedBuffer *enrolled_password_handle,
@@ -106,78 +108,53 @@ public:
     VerifyRequest();
     ~VerifyRequest();
 
-    /**
-     * The currently enrolled password handle returned by Enroll.
-     */
-    const SizedBuffer *GetPasswordHandle() const { return &password_handle_; }
-
-    /**
-     * The password provided by the user to be verified against the password handle
-     * above.
-     */
-    const SizedBuffer *GetProvidedPassword() const { return &provided_password_; }
-
-protected:
     virtual size_t nonErrorSerializedSize() const;
     virtual void nonErrorSerialize(uint8_t *buffer) const;
     virtual keyguard_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
 
-private:
-    SizedBuffer password_handle_;
-    SizedBuffer provided_password_;
+    SizedBuffer password_handle;
+    SizedBuffer provided_password;
 };
 
-class VerifyResponse : public KeyguardMessage {
-public:
+struct VerifyResponse : public KeyguardMessage {
     VerifyResponse(uint32_t user_id, SizedBuffer *verification_token);
     VerifyResponse();
     ~VerifyResponse();
 
     void SetVerificationToken(SizedBuffer *verification_token);
-    const SizedBuffer *GetVerificationToken() const { return &verification_token_; }
 
-protected:
     virtual size_t nonErrorSerializedSize() const;
     virtual void nonErrorSerialize(uint8_t *buffer) const;
     virtual keyguard_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
 
-private:
-    SizedBuffer verification_token_;
+    SizedBuffer verification_token;
 };
 
-class EnrollRequest : public KeyguardMessage {
-public:
+struct EnrollRequest : public KeyguardMessage {
     EnrollRequest(uint32_t user_id, SizedBuffer *provided_password);
     EnrollRequest();
     ~EnrollRequest();
 
-
-    const SizedBuffer *GetProvidedPassword() const { return &provided_password_; }
-
-protected:
     virtual size_t nonErrorSerializedSize() const;
     virtual void nonErrorSerialize(uint8_t *buffer) const;
     virtual keyguard_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
-private:
-    SizedBuffer provided_password_;
+
+    SizedBuffer provided_password;
 };
 
-class EnrollResponse : public KeyguardMessage {
+struct EnrollResponse : public KeyguardMessage {
 public:
     EnrollResponse(uint32_t user_id, SizedBuffer *enrolled_password_handle);
     EnrollResponse();
     ~EnrollResponse();
 
-    void SetEnrolledPasswordHandle(SizedBuffer *password_handle);
-    const SizedBuffer *GetEnrolledPasswordHandle() const { return &enrolled_password_handle_; }
+    void SetEnrolledPasswordHandle(SizedBuffer *enrolled_password_handle);
 
-protected:
     virtual size_t nonErrorSerializedSize() const;
     virtual void nonErrorSerialize(uint8_t *buffer) const;
     virtual keyguard_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
 
-private:
-   SizedBuffer enrolled_password_handle_;
+   SizedBuffer enrolled_password_handle;
 };
 }
 

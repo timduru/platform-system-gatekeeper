@@ -22,7 +22,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE:= libkeyguard
 LOCAL_SRC_FILES := \
 	keyguard_messages.cpp \
-	google_keyguard.cpp
+	keyguard.cpp
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include
 LOCAL_CFLAGS = -Wall -Werror
@@ -30,3 +30,4 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/include
 LOCAL_ADDITIONAL_DEPENDENCIES := $(LOCAL_PATH)/Android.mk
 include $(BUILD_SHARED_LIBRARY)
+

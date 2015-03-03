@@ -58,12 +58,13 @@ TEST(RoundTripTest, EnrollRequest) {
     delete[] serialized_req;
 
     ASSERT_EQ(keyguard::keyguard_error_t::KG_ERROR_OK,
-            deserialized_req.GetError());
+            deserialized_req.error);
 
-    deserialized_password = deserialized_req.GetProvidedPassword();
-    ASSERT_EQ(USER_ID, deserialized_req.GetUserId());
+    deserialized_password = &deserialized_req.provided_password;
+    ASSERT_EQ(USER_ID, deserialized_req.user_id);
     ASSERT_EQ((uint32_t) password_size, deserialized_password->length);
-    ASSERT_EQ(0, memcmp(req.GetProvidedPassword()->buffer.get(), deserialized_password->buffer.get(), password_size));
+    ASSERT_EQ(0, memcmp(req.provided_password.buffer.get(), deserialized_password->buffer.get(), password_size));
+    delete provided_password;
 }
 
 TEST(RoundTripTest, EnrollResponse) {
@@ -78,12 +79,13 @@ TEST(RoundTripTest, EnrollResponse) {
     delete[] serialized_req;
 
     ASSERT_EQ(keyguard::keyguard_error_t::KG_ERROR_OK,
-            deserialized_req.GetError());
+            deserialized_req.error);
 
-    deserialized_password = deserialized_req.GetEnrolledPasswordHandle();
-    ASSERT_EQ(USER_ID, deserialized_req.GetUserId());
+    deserialized_password = &deserialized_req.enrolled_password_handle;
+    ASSERT_EQ(USER_ID, deserialized_req.user_id);
     ASSERT_EQ((uint32_t) password_size, deserialized_password->length);
-    ASSERT_EQ(0, memcmp(req.GetEnrolledPasswordHandle()->buffer.get(), deserialized_password->buffer.get(), password_size));
+    ASSERT_EQ(0, memcmp(req.enrolled_password_handle.buffer.get(),
+                deserialized_password->buffer.get(), password_size));
 }
 
 TEST(RoundTripTest, VerifyRequest) {
@@ -98,16 +100,18 @@ TEST(RoundTripTest, VerifyRequest) {
     deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
 
     ASSERT_EQ(keyguard::keyguard_error_t::KG_ERROR_OK,
-            deserialized_req.GetError());
+            deserialized_req.error);
 
-    ASSERT_EQ(USER_ID, deserialized_req.GetUserId());
-    deserialized_password = deserialized_req.GetProvidedPassword();
+    ASSERT_EQ(USER_ID, deserialized_req.user_id);
+    deserialized_password = &deserialized_req.password_handle;
     ASSERT_EQ((uint32_t) password_size, deserialized_password->length);
-    ASSERT_EQ(0, memcmp(req.GetProvidedPassword()->buffer.get(), deserialized_password->buffer.get(), password_size));
+    ASSERT_EQ(0, memcmp(req.provided_password.buffer.get(), deserialized_password->buffer.get(),
+                password_size));
 
-    deserialized_password = deserialized_req.GetPasswordHandle();
+    deserialized_password = &deserialized_req.password_handle;
     ASSERT_EQ((uint32_t) password_size, deserialized_password->length);
-    ASSERT_EQ(0, memcmp(req.GetPasswordHandle()->buffer.get(), deserialized_password->buffer.get(), password_size));
+    ASSERT_EQ(0, memcmp(req.password_handle.buffer.get(), deserialized_password->buffer.get(),
+                password_size));
 }
 
 TEST(RoundTripTest, VerifyResponse) {
@@ -122,12 +126,13 @@ TEST(RoundTripTest, VerifyResponse) {
     delete[] serialized_req;
 
     ASSERT_EQ(keyguard::keyguard_error_t::KG_ERROR_OK,
-            deserialized_req.GetError());
+            deserialized_req.error);
 
-    ASSERT_EQ(USER_ID, deserialized_req.GetUserId());
-    deserialized_password = deserialized_req.GetVerificationToken();
+    ASSERT_EQ(USER_ID, deserialized_req.user_id);
+    deserialized_password = &deserialized_req.verification_token;
     ASSERT_EQ((uint32_t) password_size, deserialized_password->length);
-    ASSERT_EQ(0, memcmp(req.GetVerificationToken()->buffer.get(), deserialized_password->buffer.get(), password_size));
+    ASSERT_EQ(0, memcmp(req.verification_token.buffer.get(), deserialized_password->buffer.get(),
+                password_size));
 }
 
 uint8_t msgbuf[] = {

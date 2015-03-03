@@ -15,8 +15,9 @@
  */
 
 #include <gtest/gtest.h>
+#include <UniquePtr.h>
 
-#include <keyguard/google_keyguard.h>
+#include <keyguard/soft_keyguard.h>
 
 using ::keyguard::SizedBuffer;
 using ::testing::Test;
@@ -24,54 +25,29 @@ using ::keyguard::EnrollRequest;
 using ::keyguard::EnrollResponse;
 using ::keyguard::VerifyRequest;
 using ::keyguard::VerifyResponse;
-using ::keyguard::GoogleKeyguard;
+using ::keyguard::SoftKeyguard;
 using ::keyguard::AuthToken;
 
-class FakeKeyguard : public GoogleKeyguard {
-public:
-    FakeKeyguard() {
-        password_key_ = std::unique_ptr<uint8_t[]>(new uint8_t[16] {
-                2, 34, 23, 43, 52, 25, 234, 22, 65, 24, 90,
-                48, 5, 52, 62, 12 });
-    }
-
-private:
-    std::unique_ptr<uint8_t[]> GetAuthTokenKey() const {
-        return std::unique_ptr<uint8_t[]>(new uint8_t[16] {
-                2, 34, 23, 43, 52, 25, 234, 22, 65, 24, 90,
-                48, 5, 52, 62, 12 });
-    }
-
-    std::unique_ptr<uint8_t> ComputeSignature(const uint8_t key[],
-            const uint8_t *message, const size_t length, size_t *signature_length) const {
-        const size_t signature_size = 16;
-        uint8_t *signature = new uint8_t[signature_size];
-        memset(signature, 0, signature_size);
-        size_t len = length >= signature_size ? signature_size : length;
-        memcpy(signature, message, len);
-        if (signature_length != NULL) *signature_length = len;
-        return std::unique_ptr<uint8_t>(signature);
-    }
-};
-
-TEST(KeyguardTest, EnrollSuccess) {
-    FakeKeyguard keyguard;
+static void do_enroll(SoftKeyguard &keyguard, EnrollResponse *response) {
     SizedBuffer password;
-    EnrollResponse response;
 
-    password.buffer = std::unique_ptr<uint8_t>(new uint8_t[16]);
+    password.buffer.reset(new uint8_t[16]);
     password.length = 16;
     memset(password.buffer.get(), 0, 16);
     EnrollRequest request(0, &password);
 
-    keyguard.Enroll(request, &response);
+    keyguard.Enroll(request, response);
+}
 
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_OK, response.GetError());
-    ASSERT_EQ((size_t) 16, response.GetEnrolledPasswordHandle()->length);
+TEST(KeyguardTest, EnrollSuccess) {
+    SoftKeyguard keyguard;
+    EnrollResponse response;
+    do_enroll(keyguard, &response);
+    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_OK, response.error);
 }
 
 TEST(KeyguardTest, EnrollBogusData) {
-    FakeKeyguard keyguard;
+    SoftKeyguard keyguard;
     SizedBuffer password;
     EnrollResponse response;
 
@@ -79,31 +55,30 @@ TEST(KeyguardTest, EnrollBogusData) {
 
     keyguard.Enroll(request, &response);
 
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_INVALID, response.GetError());
+    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_INVALID, response.error);
 }
 
 TEST(KeyguardTest, VerifySuccess) {
-    FakeKeyguard keyguard;
+    SoftKeyguard keyguard;
     SizedBuffer provided_password;
-    SizedBuffer password_handle;
+    EnrollResponse enroll_response;
 
-    provided_password.buffer = std::unique_ptr<uint8_t>(new uint8_t[16]);
+    provided_password.buffer.reset(new uint8_t[16]);
     provided_password.length = 16;
     memset(provided_password.buffer.get(), 0, 16);
 
-    password_handle.buffer = std::unique_ptr<uint8_t>(new uint8_t[16]);
-    password_handle.length = 16;
-    memset(password_handle.buffer.get(), 0, 16);
-
-    VerifyRequest request(0, &password_handle, &provided_password);
+    do_enroll(keyguard, &enroll_response);
+    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_OK, enroll_response.error);
+    VerifyRequest request(0, &enroll_response.enrolled_password_handle,
+            &provided_password);
     VerifyResponse response;
 
     keyguard.Verify(request, &response);
 
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_OK, response.GetError());
+    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_OK, response.error);
 
     AuthToken *auth_token =
-        reinterpret_cast<AuthToken *>(response.GetVerificationToken()->buffer.get());
+        reinterpret_cast<AuthToken *>(response.verification_token.buffer.get());
 
     ASSERT_EQ((uint8_t) 1, auth_token->auth_token_tag);
     ASSERT_EQ((uint8_t) 2, auth_token->user_id_tag);
@@ -115,7 +90,7 @@ TEST(KeyguardTest, VerifySuccess) {
 }
 
 TEST(KeyguardTest, VerifyBogusData) {
-    FakeKeyguard keyguard;
+    SoftKeyguard keyguard;
     SizedBuffer provided_password;
     SizedBuffer password_handle;
     VerifyResponse response;
@@ -124,5 +99,5 @@ TEST(KeyguardTest, VerifyBogusData) {
 
     keyguard.Verify(request, &response);
 
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_INVALID, response.GetError());
+    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_INVALID, response.error);
 }
