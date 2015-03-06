@@ -20,10 +20,11 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := keyguard-unit-tests
 LOCAL_ADDITIONAL_DEPENDENCIES := $(LOCAL_PATH)/Android.mk
 LOCAL_CFLAGS += -g -Wall -Werror -std=gnu++11 -Wno-missing-field-initializers
-LOCAL_SHARED_LIBRARIES := libkeyguard libcrypto 
+LOCAL_SHARED_LIBRARIES := libkeyguard libcrypto libhardware
 LOCAL_STATIC_LIBRARIES := libscrypt_static
 LOCAL_C_INCLUDES := external/scrypt/lib/crypto
 LOCAL_SRC_FILES := \
 	keyguard_messages_test.cpp \
-	keyguard_test.cpp
+	keyguard_test.cpp \
+	keyguard_device_test.cpp
 include $(BUILD_NATIVE_TEST)

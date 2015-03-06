@@ -35,6 +35,12 @@ struct SizedBuffer {
     SizedBuffer() {
         length = 0;
     }
+
+    /*
+     * Constructs a SizedBuffer out of a pointer and a length
+     * Takes ownership of the buf pointer, and deallocates it
+     * when destructed.
+     */
     SizedBuffer(uint8_t *buf, size_t len) {
         buffer.reset(buf);
         length = len;

@@ -1,4 +1,4 @@
-# Copyright (C) 2015 The Android Open Source Project
+# Copyright (C) 2012 The Android Open Source Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,21 +14,19 @@
 
 LOCAL_PATH := $(call my-dir)
 
-###
-# libkeyguard contains just the code necessary to communicate with a
-# GoogleKeyguard implementation, e.g. one running in TrustZone.
-##
 include $(CLEAR_VARS)
-LOCAL_MODULE:= libkeyguard
+ifeq ($(USE_32_BIT_KEYSTORE), true)
+LOCAL_MULTILIB := 32
+endif
+LOCAL_MODULE := keyguard.default
+LOCAL_MODULE_RELATIVE_PATH := hw
 LOCAL_SRC_FILES := \
-	keyguard_messages.cpp \
-	keyguard.cpp
-LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/include
-LOCAL_CFLAGS = -Wall -Werror
+	module.cpp \
+	soft_keyguard_device.cpp
+LOCAL_CFLAGS = -fvisibility=hidden -Wall -Werror
+LOCAL_SHARED_LIBRARIES := libcrypto libkeyguard
+LOCAL_STATIC_LIBRARIES := libscrypt_static
+LOCAL_C_INCLUDES := external/scrypt/lib/crypto
 LOCAL_MODULE_TAGS := optional
-LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/include
 LOCAL_ADDITIONAL_DEPENDENCIES := $(LOCAL_PATH)/Android.mk
 include $(BUILD_SHARED_LIBRARY)
-
-include $(call first-makefiles-under,$(LOCAL_PATH))
