@@ -25,23 +25,27 @@
 
 namespace keyguard {
 
+typedef uint64_t secure_id_t;
+typedef uint64_t salt_t;
+
 /**
  * Data format for an authentication record used to prove
  * successful password verification. Consumed by KeyStore
  * and keymaster to determine CryptoObject availability.
+ *
+ * All fields are written in network order.
  */
+const uint8_t AUTH_TOKEN_VERSION = 0;
 struct __attribute__ ((__packed__)) AuthToken {
-    const uint8_t auth_token_tag = 0x01;
-    uint32_t auth_token_size;
-    const uint8_t user_id_tag = 0x02;
-    uint32_t user_id;
-    const uint8_t authenticator_id_tag = 0x03;
-    const uint32_t authenticator_id = 0;
-    const uint8_t timestamp_tag = 0x04;
-    uint64_t timestamp;
-    const uint8_t hmac_tag = 0x06;
-    uint8_t hmac[16];
+    uint8_t auth_token_version = AUTH_TOKEN_VERSION;
+    secure_id_t root_secure_user_id;
+    secure_id_t auxiliary_secure_user_id;
+    uint32_t authenticator_id = 0;
+    uint32_t timestamp;
+    uint8_t hmac[32];
 };
+
+struct password_handle_t;
 
 /**
  * Base class for keyguard implementations. Provides all functionality except
@@ -51,7 +55,7 @@ struct __attribute__ ((__packed__)) AuthToken {
 class Keyguard {
 public:
     Keyguard() {}
-    virtual ~Keyguard();
+    virtual ~Keyguard() {}
 
     void Enroll(const EnrollRequest &request, EnrollResponse *response);
     void Verify(const VerifyRequest &request, VerifyResponse *response);
@@ -72,6 +76,16 @@ protected:
      */
     virtual void GetAuthTokenKey(UniquePtr<uint8_t> *auth_token_key, size_t *length)
         const = 0;
+    /**
+     * The key used to sign and verify password data.
+     *
+     * MUST be different from the AuthTokenKey.
+     *
+     * GetPasswordKey is not const because unlike AuthTokenKey,
+     * this value can and should be cached in local memory. The
+     *
+     */
+    virtual void GetPasswordKey(UniquePtr<uint8_t> *password_key, size_t *length) = 0;
 
     /**
      * Uses platform-specific routines to compute a signature on the provided password.
@@ -80,41 +94,38 @@ protected:
      * available in case handling for password signatures is different from general
      * purpose signatures.
      *
-     * Assigns the signature to the signature UniquePtr, relinquishing ownership
-     * to the caller.
-     * Writes the length in bytes of the returned key to signature_length if it is not null.
-     *
+     * Writes the signature_length size signature to the 'signature' pointer.
      */
-    virtual void ComputePasswordSignature(const uint8_t *key, size_t key_length,
-            const uint8_t *password, size_t password_length, const uint8_t *salt,
-            size_t salt_length, UniquePtr<uint8_t> *signature, size_t *signature_length) const = 0;
+    virtual void ComputePasswordSignature(uint8_t *signature, size_t signature_length,
+            const uint8_t *key, size_t key_length, const uint8_t *password,
+            size_t password_length, salt_t salt) const = 0;
 
     /**
-     * Retrieves a unique, cryptographically randomly generated salt for use in password
-     * hashing.
+     * Retrieves a unique, cryptographically randomly generated buffer for use in password
+     * hashing, etc.
      *
-     * Assings the salt to the salt UniquePtr, relinquishing ownership to the caller
-     * Writes the length in bytes of the salt to salt_length if it is not null.
+     * Assings the random to the random UniquePtr, relinquishing ownership to the caller
      */
-    virtual void GetSalt(UniquePtr<uint8_t> *salt, size_t *salt_length) const = 0;
+    virtual void GetRandom(void *random, size_t requested_size) const = 0;
 
     /**
      * Uses platform-specific routines to compute a signature on the provided message.
      *
-     * Assigns the signature to the signature UniquePtr, relinquishing ownership
-     * to the caller.
-     * Writes the length in bytes of the returned key to signature_length if it is not null.
+     * Writes the signature_length size signature to the 'signature' pointer.
      */
-    virtual void ComputeSignature(const uint8_t *key, size_t key_length,
-            const uint8_t *message, const size_t length, UniquePtr<uint8_t> *signature,
-            size_t *signature_length) const = 0;
+    virtual void ComputeSignature(uint8_t *signature, size_t signature_length,
+            const uint8_t *key, size_t key_length, const uint8_t *message,
+            const size_t length) const = 0;
 
     /**
-     * The key used to sign and verify password data. This is different from the AuthTokenKey.
-     * It can be cached in this member variable as Keyguard is its only consumer. It should at
-     * no point leave Keyguard for any reason.
+     * Write the password file to persistent storage.
      */
-    SizedBuffer password_key_;
+    virtual void ReadPasswordFile(uint32_t uid, SizedBuffer *password_file) const = 0;
+
+    /**
+     * Read the password file from persistent storage.
+     */
+    virtual void WritePasswordFile(uint32_t uid, const SizedBuffer &password_file) const = 0;
 
 private:
     /**
@@ -123,19 +134,28 @@ private:
      * The format is consistent with that of AuthToken above.
      * Also returns the length in length if it is not null.
      */
-    void MintAuthToken(uint32_t user_id, UniquePtr<uint8_t> *auth_token, size_t *length);
+    void MintAuthToken(UniquePtr<uint8_t> *auth_token, size_t *length, uint32_t timestamp,
+            secure_id_t user_id, secure_id_t authenticator_id);
 
-    // Takes a salt/signature and their lengths and generates a pasword handle written
-    // into result.
-    void SerializeHandle(const uint8_t *salt, size_t salt_length, const uint8_t *signature,
-        size_t signataure_length, SizedBuffer &result);
+    /**
+     * Verifies that handle matches password HMAC'ed with the password_key
+     */
+    bool DoVerify(const password_handle_t *expected_handle, const SizedBuffer &password);
 
-    // Takes a handle and generates pointers into the salt and password inside the handle and
-    // copies out the sizes of those buffers. Makes no allocations.
-    keyguard_error_t DeserializeHandle(const SizedBuffer *handle, uint8_t **salt,
-        size_t *salt_length, uint8_t **password, size_t *password_length);
+    /**
+     * Verifies that the provided handle matches byte-by-byte what was previously
+     * stored as a result of a call to 'Enroll'
+     */
+    bool ValidatePasswordFile(uint32_t uid, const SizedBuffer &provided_handle);
 
+    /**
+     * Populates password_handle with the data provided and computes HMAC.
+     */
+    bool CreatePasswordHandle(SizedBuffer *password_handle, salt_t salt,
+        secure_id_t secure_id, secure_id_t authenticator_id, const uint8_t *password,
+        size_t password_length);
 };
+
 }
 
 #endif // KEYGUARD_H_

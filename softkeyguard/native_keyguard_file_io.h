@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 The Android Open Source Project
+ * Copyright 2015 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,9 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "soft_keyguard_device.h"
 
-extern struct keyguard_module soft_keyguard_device_module;
+#ifndef KEYGUARD_FILE_IO_
+#define KEYGUARD_FILE_IO_
 
-struct keyguard_module HAL_MODULE_INFO_SYM __attribute__((visibility("default")))
-    = soft_keyguard_device_module;
+#include <keyguard/soft_keyguard.h>
+
+namespace keyguard {
+
+class NativeKeyguardFileIo : public ::keyguard::KeyguardFileIo {
+public:
+    virtual void Write(const char *filename, const uint8_t *bytes, size_t length) {
+        // TODO
+    }
+
+    virtual size_t Read(const char *filename, UniquePtr<uint8_t> *bytes) const {
+        // TODO
+        return 0;
+    }
+private:
+};
+}
+
+#endif // KEYGUARD_FILE_IO_

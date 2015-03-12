@@ -37,6 +37,19 @@ struct SizedBuffer {
     }
 
     /*
+     * Constructs a SizedBuffer of a provided
+     * length.
+     */
+    SizedBuffer(size_t length) {
+        if (length != 0) {
+            buffer.reset(new uint8_t[length]);
+        } else {
+            buffer.reset();
+        }
+        this->length = length;
+    }
+
+    /*
      * Constructs a SizedBuffer out of a pointer and a length
      * Takes ownership of the buf pointer, and deallocates it
      * when destructed.
@@ -123,21 +136,22 @@ struct VerifyRequest : public KeyguardMessage {
 };
 
 struct VerifyResponse : public KeyguardMessage {
-    VerifyResponse(uint32_t user_id, SizedBuffer *verification_token);
+    VerifyResponse(uint32_t user_id, SizedBuffer *auth_token);
     VerifyResponse();
     ~VerifyResponse();
 
-    void SetVerificationToken(SizedBuffer *verification_token);
+    void SetVerificationToken(SizedBuffer *auth_token);
 
     virtual size_t nonErrorSerializedSize() const;
     virtual void nonErrorSerialize(uint8_t *buffer) const;
     virtual keyguard_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
 
-    SizedBuffer verification_token;
+    SizedBuffer auth_token;
 };
 
 struct EnrollRequest : public KeyguardMessage {
-    EnrollRequest(uint32_t user_id, SizedBuffer *provided_password);
+    EnrollRequest(uint32_t user_id, SizedBuffer *password_handle,
+            SizedBuffer *provided_password, SizedBuffer *enrolled_password);
     EnrollRequest();
     ~EnrollRequest();
 
@@ -145,6 +159,18 @@ struct EnrollRequest : public KeyguardMessage {
     virtual void nonErrorSerialize(uint8_t *buffer) const;
     virtual keyguard_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
 
+    /**
+     * The password handle returned from the previous call to enroll or NULL
+     * if none
+     */
+    SizedBuffer password_handle;
+    /**
+     * The currently enrolled password as entered by the user
+     */
+    SizedBuffer enrolled_password;
+    /**
+     * The password desired by the user
+     */
     SizedBuffer provided_password;
 };
 

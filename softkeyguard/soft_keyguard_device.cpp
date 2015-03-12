@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-#include <keyguard/soft_keyguard_device.h>
+#include "soft_keyguard_device.h"
+#include "native_keyguard_file_io.h"
 
 __attribute__((visibility("default")))
 int softkeyguard_device_open(const hw_module_t *module, const char *name, hw_device_t **device) {
@@ -53,7 +54,7 @@ struct keyguard_module soft_keyguard_device_module = {
 namespace keyguard {
 
 SoftKeyguardDevice::SoftKeyguardDevice(const hw_module_t *module)
-    : impl_(new SoftKeyguard()) {
+    : impl_(new SoftKeyguard(new NativeKeyguardFileIo())) {
 #if __cplusplus >= 201103L || defined(__GXX_EXPERIMENTAL_CXX0X__)
     static_assert(std::is_standard_layout<SoftKeyguardDevice>::value,
                   "SoftKeyguardDevice must be standard layout");
@@ -72,8 +73,8 @@ SoftKeyguardDevice::SoftKeyguardDevice(const hw_module_t *module)
     device_.common.module = const_cast<hw_module_t *>(module);
     device_.common.close = close_device;
 
-    device_.verify = verify;
-    device_.enroll = enroll;
+    device_.verify = Verify;
+    device_.enroll = Enroll;
 }
 
 hw_device_t *SoftKeyguardDevice::hw_device() {
@@ -90,19 +91,42 @@ int SoftKeyguardDevice::close_device(hw_device_t* dev) {
     return 0;
 }
 
-int SoftKeyguardDevice::enroll(const struct keyguard_device *dev, uint32_t uid,
-        const uint8_t *password_payload, size_t password_payload_length,
-        uint8_t **enrolled_password_handle, size_t *enrolled_password_handle_length) {
+int SoftKeyguardDevice::Enroll(const struct keyguard_device *dev, uint32_t uid,
+            const uint8_t *current_password_handle, size_t current_password_handle_length,
+            const uint8_t *current_password, size_t current_password_length,
+            const uint8_t *desired_password, size_t desired_password_length,
+            uint8_t **enrolled_password_handle, size_t *enrolled_password_handle_length) {
 
     if (dev == NULL ||
-            enrolled_password_handle == NULL || enrolled_password_handle_length == NULL)
+            enrolled_password_handle == NULL || enrolled_password_handle_length == NULL ||
+            desired_password == NULL || desired_password_length == 0)
         return -EINVAL;
 
-    uint8_t *local_password_payload = new uint8_t[password_payload_length];
-    memcpy(local_password_payload, password_payload, password_payload_length);
+    // Current password and current password handle go together
+    if (current_password_handle == NULL || current_password_handle_length == 0 ||
+            current_password == NULL || current_password_length == 0) {
+        current_password_handle = NULL;
+        current_password_handle_length = 0;
+        current_password = NULL;
+        current_password_length = 0;
+    }
 
-    SizedBuffer provided_password(local_password_payload, password_payload_length);
-    EnrollRequest request(uid, &provided_password);
+    SizedBuffer desired_password_buffer(desired_password_length);
+    memcpy(desired_password_buffer.buffer.get(), desired_password, desired_password_length);
+
+    SizedBuffer current_password_handle_buffer(current_password_handle_length);
+    if (current_password_handle) {
+        memcpy(current_password_handle_buffer.buffer.get(), current_password_handle,
+                current_password_handle_length);
+    }
+
+    SizedBuffer current_password_buffer(current_password_length);
+    if (current_password) {
+        memcpy(current_password_buffer.buffer.get(), current_password, current_password_length);
+    }
+
+    EnrollRequest request(uid, &current_password_handle_buffer, &desired_password_buffer,
+            &current_password_buffer);
     EnrollResponse response;
 
     convert_device(dev)->impl_->Enroll(request, &response);
@@ -115,25 +139,22 @@ int SoftKeyguardDevice::enroll(const struct keyguard_device *dev, uint32_t uid,
     return 0;
 }
 
-int SoftKeyguardDevice::verify(const struct keyguard_device *dev, uint32_t uid,
+int SoftKeyguardDevice::Verify(const struct keyguard_device *dev, uint32_t uid,
         const uint8_t *enrolled_password_handle, size_t enrolled_password_handle_length,
         const uint8_t *provided_password, size_t provided_password_length,
-        uint8_t **verification_token, size_t *verification_token_length) {
+        uint8_t **auth_token, size_t *auth_token_length) {
 
     if (dev == NULL || enrolled_password_handle == NULL ||
             provided_password == NULL) {
         return -EINVAL;
     }
 
-    uint8_t *local_provided_password = new uint8_t[provided_password_length];
-    uint8_t *local_enrolled_password = new uint8_t[enrolled_password_handle_length];
-    memcpy(local_provided_password, provided_password, provided_password_length);
-    memcpy(local_enrolled_password, enrolled_password_handle, enrolled_password_handle_length);
+    SizedBuffer password_handle_buffer(enrolled_password_handle_length);
+    memcpy(password_handle_buffer.buffer.get(), enrolled_password_handle, enrolled_password_handle_length);
+    SizedBuffer provided_password_buffer(provided_password_length);
+    memcpy(provided_password_buffer.buffer.get(), provided_password, provided_password_length);
 
-    SizedBuffer password_handle(local_enrolled_password,
-            enrolled_password_handle_length);
-    SizedBuffer provided(local_provided_password, provided_password_length);
-    VerifyRequest request(uid, &password_handle, &provided);
+    VerifyRequest request(uid, &password_handle_buffer, &provided_password_buffer);
     VerifyResponse response;
 
     convert_device(dev)->impl_->Verify(request, &response);
@@ -141,9 +162,9 @@ int SoftKeyguardDevice::verify(const struct keyguard_device *dev, uint32_t uid,
     if (response.error != KG_ERROR_OK)
        return -EINVAL;
 
-    if (verification_token != NULL && verification_token_length != NULL) {
-       *verification_token = response.verification_token.buffer.release();
-       *verification_token_length = response.verification_token.length;
+    if (auth_token != NULL && auth_token_length != NULL) {
+       *auth_token = response.auth_token.buffer.release();
+       *auth_token_length = response.auth_token.length;
     }
 
     return 0;

@@ -33,22 +33,26 @@ static inline size_t serialized_buffer_size(const SizedBuffer &buf) {
 static inline void append_to_buffer(uint8_t **buffer, const SizedBuffer *to_append) {
     memcpy(*buffer, &to_append->length, sizeof(to_append->length));
     *buffer += sizeof(to_append->length);
-    memcpy(*buffer, to_append->buffer.get(), to_append->length);
-    *buffer += to_append->length;
+    if (to_append->length != 0) {
+        memcpy(*buffer, to_append->buffer.get(), to_append->length);
+        *buffer += to_append->length;
+    }
 }
 
 static inline keyguard_error_t read_from_buffer(const uint8_t **buffer, const uint8_t *end,
         SizedBuffer *target) {
-    if (*buffer + sizeof(target->length) >= end) return KG_ERROR_INVALID;
+    if (*buffer + sizeof(target->length) > end) return KG_ERROR_INVALID;
 
     memcpy(&target->length, *buffer, sizeof(target->length));
     *buffer += sizeof(target->length);
-    const uint8_t *buffer_end = *buffer + target->length;
-    if (buffer_end > end || buffer_end <= *buffer) return KG_ERROR_INVALID;
+    if (target->length != 0) {
+        const uint8_t *buffer_end = *buffer + target->length;
+        if (buffer_end > end || buffer_end <= *buffer) return KG_ERROR_INVALID;
 
-    target->buffer.reset(new uint8_t[target->length]);
-    memcpy(target->buffer.get(), *buffer, target->length);
-    *buffer += target->length;
+        target->buffer.reset(new uint8_t[target->length]);
+        memcpy(target->buffer.get(), *buffer, target->length);
+        *buffer += target->length;
+    }
     return KG_ERROR_OK;
 }
 
@@ -145,51 +149,70 @@ keyguard_error_t VerifyRequest::nonErrorDeserialize(const uint8_t *payload, cons
 
 }
 
-VerifyResponse::VerifyResponse(uint32_t user_id, SizedBuffer *verification_token) {
+VerifyResponse::VerifyResponse(uint32_t user_id, SizedBuffer *auth_token) {
     this->user_id = user_id;
-    this->verification_token.buffer.reset(verification_token->buffer.release());
-    this->verification_token.length = verification_token->length;
+    this->auth_token.buffer.reset(auth_token->buffer.release());
+    this->auth_token.length = auth_token->length;
 }
 
 VerifyResponse::VerifyResponse() {
-    memset_s(&verification_token, 0, sizeof(verification_token));
+    memset_s(&auth_token, 0, sizeof(auth_token));
 };
 
 VerifyResponse::~VerifyResponse() {
-    if (verification_token.length > 0) {
-        verification_token.buffer.reset();
+    if (auth_token.length > 0) {
+        auth_token.buffer.reset();
     }
 }
 
-void VerifyResponse::SetVerificationToken(SizedBuffer *verification_token) {
-    this->verification_token.buffer.reset(verification_token->buffer.release());
-    this->verification_token.length = verification_token->length;
+void VerifyResponse::SetVerificationToken(SizedBuffer *auth_token) {
+    this->auth_token.buffer.reset(auth_token->buffer.release());
+    this->auth_token.length = auth_token->length;
 }
 
 size_t VerifyResponse::nonErrorSerializedSize() const {
-    return serialized_buffer_size(verification_token);
+    return serialized_buffer_size(auth_token);
 }
 
 void VerifyResponse::nonErrorSerialize(uint8_t *buffer) const {
-    append_to_buffer(&buffer, &verification_token);
+    append_to_buffer(&buffer, &auth_token);
 }
 
 keyguard_error_t VerifyResponse::nonErrorDeserialize(const uint8_t *payload, const uint8_t *end) {
-    if (verification_token.buffer.get()) {
-        verification_token.buffer.reset();
+    if (auth_token.buffer.get()) {
+        auth_token.buffer.reset();
     }
 
-    return read_from_buffer(&payload, end, &verification_token);
+    return read_from_buffer(&payload, end, &auth_token);
 }
 
-EnrollRequest::EnrollRequest(uint32_t user_id, SizedBuffer *provided_password) {
+EnrollRequest::EnrollRequest(uint32_t user_id, SizedBuffer *password_handle,
+        SizedBuffer *provided_password,  SizedBuffer *enrolled_password) {
     this->user_id = user_id;
     this->provided_password.buffer.reset(provided_password->buffer.release());
     this->provided_password.length = provided_password->length;
+
+    if (enrolled_password == NULL) {
+        this->enrolled_password.buffer.reset();
+        this->enrolled_password.length = 0;
+    } else {
+        this->enrolled_password.buffer.reset(enrolled_password->buffer.release());
+        this->enrolled_password.length = enrolled_password->length;
+    }
+
+    if (password_handle == NULL) {
+        this->password_handle.buffer.reset();
+        this->password_handle.length = 0;
+    } else {
+        this->password_handle.buffer.reset(password_handle->buffer.release());
+        this->password_handle.length = password_handle->length;
+    }
 }
 
 EnrollRequest::EnrollRequest() {
     memset_s(&provided_password, 0, sizeof(provided_password));
+    memset_s(&enrolled_password, 0, sizeof(enrolled_password));
+    memset_s(&password_handle, 0, sizeof(password_handle));
 }
 
 EnrollRequest::~EnrollRequest() {
@@ -197,23 +220,57 @@ EnrollRequest::~EnrollRequest() {
         memset_s(provided_password.buffer.get(), 0, provided_password.length);
         provided_password.buffer.reset();
     }
+
+    if (enrolled_password.buffer.get()) {
+        memset_s(enrolled_password.buffer.get(), 0, enrolled_password.length);
+        enrolled_password.buffer.reset();
+    }
+
+    if (password_handle.buffer.get()) {
+        memset_s(password_handle.buffer.get(), 0, password_handle.length);
+        password_handle.buffer.reset();
+    }
 }
 
 size_t EnrollRequest::nonErrorSerializedSize() const {
-   return serialized_buffer_size(provided_password);
+   return serialized_buffer_size(provided_password) + serialized_buffer_size(enrolled_password)
+       + serialized_buffer_size(password_handle);
 }
 
 void EnrollRequest::nonErrorSerialize(uint8_t *buffer) const {
     append_to_buffer(&buffer, &provided_password);
+    append_to_buffer(&buffer, &enrolled_password);
+    append_to_buffer(&buffer, &password_handle);
 }
 
 keyguard_error_t EnrollRequest::nonErrorDeserialize(const uint8_t *payload, const uint8_t *end) {
+    keyguard_error_t ret;
     if (provided_password.buffer.get()) {
         memset_s(provided_password.buffer.get(), 0, provided_password.length);
         provided_password.buffer.reset();
     }
 
-    return read_from_buffer(&payload, end, &provided_password);
+    if (enrolled_password.buffer.get()) {
+        memset_s(enrolled_password.buffer.get(), 0, enrolled_password.length);
+        enrolled_password.buffer.reset();
+    }
+
+    if (password_handle.buffer.get()) {
+        memset_s(password_handle.buffer.get(), 0, password_handle.length);
+        password_handle.buffer.reset();
+    }
+
+     ret = read_from_buffer(&payload, end, &provided_password);
+     if (ret != KG_ERROR_OK) {
+         return ret;
+     }
+
+     ret = read_from_buffer(&payload, end, &enrolled_password);
+     if (ret != KG_ERROR_OK) {
+         return ret;
+     }
+
+     return read_from_buffer(&payload, end, &password_handle);
 }
 
 EnrollResponse::EnrollResponse(uint32_t user_id, SizedBuffer *enrolled_password_handle) {

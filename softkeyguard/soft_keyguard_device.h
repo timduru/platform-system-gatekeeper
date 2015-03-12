@@ -50,27 +50,28 @@ private:
      * Returns: 0 on success or an error code less than 0 on error.
      * On error, enrolled_password_handle will not be allocated.
      */
-    static int enroll(const struct keyguard_device *dev, uint32_t uid,
-            const uint8_t *password_payload, size_t password_payload_length,
+    static int Enroll(const struct keyguard_device *dev, uint32_t uid,
+            const uint8_t *current_password_handle, size_t current_password_handle_length,
+            const uint8_t *current_password, size_t current_password_length,
+            const uint8_t *desired_password, size_t desired_password_length,
             uint8_t **enrolled_password_handle, size_t *enrolled_password_handle_length);
-
     /**
      * Verifies provided_password matches enrolled_password_handle.
      *
      * Implementations of this module may retain the result of this call
      * to attest to the recency of authentication.
      *
-     * On success, writes the address of a verification token to verification_token,
+     * On success, writes the address of a verification token to auth_token,
      * usable to attest password verification to other trusted services. Clients
      * may pass NULL for this value.
      *
      * Returns: 0 on success or an error code less than 0 on error
      * On error, verification token will not be allocated
      */
-    static int verify(const struct keyguard_device *dev, uint32_t uid,
+    static int Verify(const struct keyguard_device *dev, uint32_t uid,
             const uint8_t *enrolled_password_handle, size_t enrolled_password_handle_length,
             const uint8_t *provided_password, size_t provided_password_length,
-            uint8_t **verification_token, size_t *verification_token_length);
+            uint8_t **auth_token, size_t *auth_token_length);
 
     keyguard_device device_;
     UniquePtr<Keyguard> impl_;

@@ -55,7 +55,7 @@ TEST_F(KeyguardDeviceTest, EnrollAndVerify) {
     size_t auth_token_len;
     int ret;
 
-    ret = device->enroll(device, 0, password_payload, password_len,
+    ret = device->enroll(device, 0, NULL, 0, NULL, 0,  password_payload, password_len,
             &password_handle, &password_handle_length);
 
     ASSERT_EQ(0, ret);
@@ -75,8 +75,8 @@ TEST_F(KeyguardDeviceTest, EnrollAndVerifyBadPassword) {
     size_t auth_token_len;
     int ret;
 
-    ret = device->enroll(device, 0, password_payload, password_len,
-            &password_handle, &password_handle_length);
+    ret = device->enroll(device, 0, NULL, 0, NULL, 0,  password_payload, password_len,
+             &password_handle, &password_handle_length);
 
     ASSERT_EQ(0, ret);
 

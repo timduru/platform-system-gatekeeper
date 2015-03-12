@@ -46,12 +46,12 @@ static SizedBuffer *make_buffer(size_t size) {
     return result;
 }
 
-TEST(RoundTripTest, EnrollRequest) {
+TEST(RoundTripTest, EnrollRequestNullEnrolledNullHandle) {
     const size_t password_size = 512;
     SizedBuffer *provided_password = make_buffer(password_size);
     const SizedBuffer *deserialized_password;
     // create request, serialize, deserialize, and validate
-    EnrollRequest req(USER_ID, provided_password);
+    EnrollRequest req(USER_ID, NULL, provided_password, NULL);
     uint8_t *serialized_req = req.Serialize();
     EnrollRequest deserialized_req;
     deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
@@ -64,8 +64,73 @@ TEST(RoundTripTest, EnrollRequest) {
     ASSERT_EQ(USER_ID, deserialized_req.user_id);
     ASSERT_EQ((uint32_t) password_size, deserialized_password->length);
     ASSERT_EQ(0, memcmp(req.provided_password.buffer.get(), deserialized_password->buffer.get(), password_size));
+    ASSERT_EQ((size_t) 0, deserialized_req.enrolled_password.length);
+    ASSERT_EQ(NULL, deserialized_req.enrolled_password.buffer.get());
+    ASSERT_EQ((size_t) 0, deserialized_req.password_handle.length);
+    ASSERT_EQ(NULL, deserialized_req.password_handle.buffer.get());
     delete provided_password;
 }
+
+TEST(RoundTripTest, EnrollRequestEmptyEnrolledEmptyHandle) {
+    const size_t password_size = 512;
+    SizedBuffer *provided_password = make_buffer(password_size);
+    SizedBuffer enrolled;
+    SizedBuffer handle;
+    const SizedBuffer *deserialized_password;
+    // create request, serialize, deserialize, and validate
+    EnrollRequest req(USER_ID, &handle, provided_password, &enrolled);
+    uint8_t *serialized_req = req.Serialize();
+    EnrollRequest deserialized_req;
+    deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
+    delete[] serialized_req;
+
+    ASSERT_EQ(keyguard::keyguard_error_t::KG_ERROR_OK,
+            deserialized_req.error);
+
+    deserialized_password = &deserialized_req.provided_password;
+    ASSERT_EQ(USER_ID, deserialized_req.user_id);
+    ASSERT_EQ((uint32_t) password_size, deserialized_password->length);
+    ASSERT_EQ(0, memcmp(req.provided_password.buffer.get(), deserialized_password->buffer.get(), password_size));
+    ASSERT_EQ((size_t) 0, deserialized_req.enrolled_password.length);
+    ASSERT_EQ(NULL, deserialized_req.enrolled_password.buffer.get());
+    ASSERT_EQ((size_t) 0, deserialized_req.password_handle.length);
+    ASSERT_EQ(NULL, deserialized_req.password_handle.buffer.get());
+    delete provided_password;
+}
+
+TEST(RoundTripTest, EnrollRequestNonNullEnrolledOrHandle) {
+    const size_t password_size = 512;
+    SizedBuffer *provided_password = make_buffer(password_size);
+    SizedBuffer *enrolled_password = make_buffer(password_size);
+    SizedBuffer *password_handle = make_buffer(password_size);
+    const SizedBuffer *deserialized_password;
+    const SizedBuffer *deserialized_enrolled;
+    const SizedBuffer *deserialized_handle;
+    // create request, serialize, deserialize, and validate
+    EnrollRequest req(USER_ID, password_handle, provided_password, enrolled_password);
+    uint8_t *serialized_req = req.Serialize();
+    EnrollRequest deserialized_req;
+    deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
+    delete[] serialized_req;
+
+    ASSERT_EQ(keyguard::keyguard_error_t::KG_ERROR_OK,
+            deserialized_req.error);
+
+    deserialized_password = &deserialized_req.provided_password;
+    deserialized_enrolled = &deserialized_req.enrolled_password;
+    deserialized_handle = &deserialized_req.password_handle;
+    ASSERT_EQ(USER_ID, deserialized_req.user_id);
+    ASSERT_EQ((uint32_t) password_size, deserialized_password->length);
+    ASSERT_EQ(0, memcmp(req.provided_password.buffer.get(), deserialized_password->buffer.get(), password_size));
+    ASSERT_EQ((uint32_t) password_size, deserialized_enrolled->length);
+    ASSERT_EQ(0, memcmp(req.enrolled_password.buffer.get(), deserialized_enrolled->buffer.get(), password_size));
+    ASSERT_EQ((uint32_t) password_size, deserialized_handle->length);
+    ASSERT_EQ(0, memcmp(req.password_handle.buffer.get(), deserialized_handle->buffer.get(), password_size));
+    delete provided_password;
+    delete enrolled_password;
+    delete password_handle;
+}
+
 
 TEST(RoundTripTest, EnrollResponse) {
     const size_t password_size = 512;
@@ -116,10 +181,10 @@ TEST(RoundTripTest, VerifyRequest) {
 
 TEST(RoundTripTest, VerifyResponse) {
     const size_t password_size = 512;
-    SizedBuffer *verification_token = make_buffer(password_size);
+    SizedBuffer *auth_token = make_buffer(password_size);
     const SizedBuffer *deserialized_password;
     // create request, serialize, deserialize, and validate
-    VerifyResponse req(USER_ID, verification_token);
+    VerifyResponse req(USER_ID, auth_token);
     uint8_t *serialized_req = req.Serialize();
     VerifyResponse deserialized_req;
     deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
@@ -129,9 +194,9 @@ TEST(RoundTripTest, VerifyResponse) {
             deserialized_req.error);
 
     ASSERT_EQ(USER_ID, deserialized_req.user_id);
-    deserialized_password = &deserialized_req.verification_token;
+    deserialized_password = &deserialized_req.auth_token;
     ASSERT_EQ((uint32_t) password_size, deserialized_password->length);
-    ASSERT_EQ(0, memcmp(req.verification_token.buffer.get(), deserialized_password->buffer.get(),
+    ASSERT_EQ(0, memcmp(req.auth_token.buffer.get(), deserialized_password->buffer.get(),
                 password_size));
 }
 

@@ -25,8 +25,19 @@ extern "C" {
 
 #include <UniquePtr.h>
 #include <keyguard/keyguard.h>
+#include <iostream>
 
 namespace keyguard {
+
+/**
+ * Convenience class for easily switching out a testing implementation
+ */
+class KeyguardFileIo {
+public:
+    virtual ~KeyguardFileIo() {}
+    virtual void Write(const char *filename, const uint8_t *bytes, size_t length) = 0;
+    virtual size_t Read(const char *filename, UniquePtr<uint8_t> *bytes) const = 0;
+};
 
 class SoftKeyguard : public Keyguard {
 public:
@@ -38,46 +49,67 @@ public:
     static const uint32_t r = 8;
     static const uint32_t p = 1;
 
-    SoftKeyguard() {
-        password_key_.buffer.reset();
-        password_key_.length = 0;
+    static const int MAX_UINT_32_CHARS = 11;
+
+    SoftKeyguard(KeyguardFileIo *file_io) {
+        file_io_ = file_io;
     }
 
-    virtual void GetAuthTokenKey(UniquePtr<uint8_t> *,
+    virtual ~SoftKeyguard() {
+        delete file_io_;
+    }
+
+    virtual void GetAuthTokenKey(UniquePtr<uint8_t> *auth_token_key,
             size_t *length) const {
-        // No auth token key for SW impl
-        if (length != NULL) *length = 0;
+        auth_token_key->reset(new uint8_t[SIGNATURE_LENGTH]);
+        memset(auth_token_key->get(), 0, SIGNATURE_LENGTH);
+        if (length != NULL) *length = SIGNATURE_LENGTH;
     }
 
-    virtual void ComputePasswordSignature(const uint8_t *, size_t,
-            const uint8_t *password, size_t password_length, const uint8_t *salt, size_t salt_length,
-            UniquePtr<uint8_t> *signature, size_t *signature_length) const {
+    virtual void GetPasswordKey(UniquePtr<uint8_t> *password_key, size_t *length) {
+        password_key->reset(new uint8_t[SIGNATURE_LENGTH]);
+        memset(password_key->get(), 0, SIGNATURE_LENGTH);
+        if (length != NULL) *length = SIGNATURE_LENGTH;
+    }
+
+    virtual void ComputePasswordSignature(uint8_t *signature, size_t signature_length,
+            const uint8_t *, size_t, const uint8_t *password,
+            size_t password_length, salt_t salt) const {
         if (signature == NULL) return;
-        uint8_t *signature_bytes = new uint8_t[SIGNATURE_LENGTH];
-        crypto_scrypt(password, password_length, salt, salt_length, N, r, p,
-                signature_bytes, SIGNATURE_LENGTH);
-        if (signature_length != NULL) *signature_length = SIGNATURE_LENGTH;
-        signature->reset(signature_bytes);
+        crypto_scrypt(password, password_length, reinterpret_cast<uint8_t *>(&salt),
+                sizeof(salt), N, r, p, signature, signature_length);
     }
 
-    virtual void GetSalt(UniquePtr<uint8_t> *salt, size_t *salt_length) const {
-        if (salt == NULL) return;
-        uint8_t *salt_bytes = new uint8_t[SALT_LENGTH];
-        RAND_pseudo_bytes(salt_bytes, SALT_LENGTH);
-        if (salt_length != NULL) *salt_length = SALT_LENGTH;
-        salt->reset(salt_bytes);
+    virtual void GetRandom(void *random, size_t requested_length) const {
+        if (random == NULL) return;
+        RAND_pseudo_bytes((uint8_t *) random, requested_length);
     }
 
-    virtual void ComputeSignature(const uint8_t *, size_t,
-                const uint8_t *, const size_t, UniquePtr<uint8_t> *signature,
-                size_t *signature_length) const {
+    virtual void ComputeSignature(uint8_t *signature, size_t signature_length,
+            const uint8_t *, size_t, const uint8_t *, const size_t) const {
         if (signature == NULL) return;
-        if (signature_length != NULL) *signature_length = SIGNATURE_LENGTH;
-        uint8_t *result = new uint8_t[16];
-        memset(result, 0, 16);
-        signature->reset(result);
+        memset(signature, 0, signature_length);
     }
 
+    virtual void ReadPasswordFile(uint32_t uid, SizedBuffer *password_file) const {
+        char buf[MAX_UINT_32_CHARS];
+        sprintf(buf, "%u", uid);
+        UniquePtr<uint8_t> password_buffer;
+        size_t length = file_io_->Read(buf, &password_buffer);
+        password_file->buffer.reset(password_buffer.release());
+        password_file->length = length;
+    }
+
+    virtual void WritePasswordFile(uint32_t uid, const SizedBuffer &password_file) const {
+        char buf[MAX_UINT_32_CHARS];
+        sprintf(buf, "%u", uid);
+        file_io_->Write(buf, password_file.buffer.get(), password_file.length);
+    }
+
+private:
+    KeyguardFileIo *file_io_;
 };
 }
+
 #endif // SOFT_KEYGUARD_H_
+

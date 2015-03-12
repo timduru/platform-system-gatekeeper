@@ -25,7 +25,7 @@ LOCAL_SRC_FILES := \
 	keyguard.cpp
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include
-LOCAL_CFLAGS = -Wall -Werror
+LOCAL_CFLAGS = -Wall -Werror -g
 LOCAL_MODULE_TAGS := optional
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/include
 LOCAL_ADDITIONAL_DEPENDENCIES := $(LOCAL_PATH)/Android.mk
