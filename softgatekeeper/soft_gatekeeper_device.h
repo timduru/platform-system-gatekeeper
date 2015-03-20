@@ -14,33 +14,33 @@
  * limitations under the License.
  */
 
-#ifndef SYSTEM_SOFT_KEYGUARD_DEVICE_H_
-#define SYSTEM_SOFT_KEYGUARD_DEVICE_H_
+#ifndef SOFT_GATEKEEPER_DEVICE_H_
+#define SOFT_GATEKEEPER_DEVICE_H_
 
-#include <keyguard/soft_keyguard.h>
-#include <hardware/keyguard.h>
+#include <gatekeeper/soft_gatekeeper.h>
+#include <hardware/gatekeeper.h>
 #include <UniquePtr.h>
 
-namespace keyguard {
+namespace gatekeeper {
 
 /**
- * Software based Keyguard implementation
+ * Software based GateKeeper implementation
  *
  * IMPORTANT MAINTAINER NOTE: Pointers to instances of this class must be castable to hw_device_t
- * and keyguard. This means it must remain a standard layout class (no virtual functions and
+ * and gatekeeper. This means it must remain a standard layout class (no virtual functions and
  * no data members which aren't standard layout), and device_ must be the first data member.
  * Assertions in the constructor validate compliance with those constraints.
  */
-class SoftKeyguardDevice {
+class SoftGateKeeperDevice {
 public:
-   SoftKeyguardDevice(const hw_module_t *module);
+   SoftGateKeeperDevice(const hw_module_t *module);
 
    hw_device_t *hw_device();
 
 private:
     static int close_device(hw_device_t* dev);
 
-   // Wrappers to translate the keyguard HAL API to the Kegyuard Messages API.
+   // Wrappers to translate the gatekeeper HAL API to the Kegyuard Messages API.
 
     /**
      * Enrolls password_payload, which should be derived from a user selected pin or password,
@@ -50,7 +50,7 @@ private:
      * Returns: 0 on success or an error code less than 0 on error.
      * On error, enrolled_password_handle will not be allocated.
      */
-    static int Enroll(const struct keyguard_device *dev, uint32_t uid,
+    static int Enroll(const struct gatekeeper_device *dev, uint32_t uid,
             const uint8_t *current_password_handle, size_t current_password_handle_length,
             const uint8_t *current_password, size_t current_password_length,
             const uint8_t *desired_password, size_t desired_password_length,
@@ -68,15 +68,15 @@ private:
      * Returns: 0 on success or an error code less than 0 on error
      * On error, verification token will not be allocated
      */
-    static int Verify(const struct keyguard_device *dev, uint32_t uid,
+    static int Verify(const struct gatekeeper_device *dev, uint32_t uid,
             const uint8_t *enrolled_password_handle, size_t enrolled_password_handle_length,
             const uint8_t *provided_password, size_t provided_password_length,
             uint8_t **auth_token, size_t *auth_token_length);
 
-    keyguard_device device_;
-    UniquePtr<Keyguard> impl_;
+    gatekeeper_device device_;
+    UniquePtr<GateKeeper> impl_;
 };
 
-} // namespace keyguard
+} // namespace gatekeeper
 
-#endif //SYSTEM_SOFT_KEYGUARD_DEVICE_H_
+#endif //SOFT_GATEKEEPER_DEVICE_H_

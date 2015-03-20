@@ -19,14 +19,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <keyguard/keyguard_messages.h>
+#include <gatekeeper/gatekeeper_messages.h>
 
-using ::keyguard::SizedBuffer;
+using ::gatekeeper::SizedBuffer;
 using ::testing::Test;
-using ::keyguard::EnrollRequest;
-using ::keyguard::EnrollResponse;
-using ::keyguard::VerifyRequest;
-using ::keyguard::VerifyResponse;
+using ::gatekeeper::EnrollRequest;
+using ::gatekeeper::EnrollResponse;
+using ::gatekeeper::VerifyRequest;
+using ::gatekeeper::VerifyResponse;
 using std::cout;
 using std::endl;
 
@@ -57,7 +57,7 @@ TEST(RoundTripTest, EnrollRequestNullEnrolledNullHandle) {
     deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
     delete[] serialized_req;
 
-    ASSERT_EQ(keyguard::keyguard_error_t::KG_ERROR_OK,
+    ASSERT_EQ(gatekeeper::gatekeeper_error_t::ERROR_NONE,
             deserialized_req.error);
 
     deserialized_password = &deserialized_req.provided_password;
@@ -84,7 +84,7 @@ TEST(RoundTripTest, EnrollRequestEmptyEnrolledEmptyHandle) {
     deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
     delete[] serialized_req;
 
-    ASSERT_EQ(keyguard::keyguard_error_t::KG_ERROR_OK,
+    ASSERT_EQ(gatekeeper::gatekeeper_error_t::ERROR_NONE,
             deserialized_req.error);
 
     deserialized_password = &deserialized_req.provided_password;
@@ -113,7 +113,7 @@ TEST(RoundTripTest, EnrollRequestNonNullEnrolledOrHandle) {
     deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
     delete[] serialized_req;
 
-    ASSERT_EQ(keyguard::keyguard_error_t::KG_ERROR_OK,
+    ASSERT_EQ(gatekeeper::gatekeeper_error_t::ERROR_NONE,
             deserialized_req.error);
 
     deserialized_password = &deserialized_req.provided_password;
@@ -143,7 +143,7 @@ TEST(RoundTripTest, EnrollResponse) {
     deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
     delete[] serialized_req;
 
-    ASSERT_EQ(keyguard::keyguard_error_t::KG_ERROR_OK,
+    ASSERT_EQ(gatekeeper::gatekeeper_error_t::ERROR_NONE,
             deserialized_req.error);
 
     deserialized_password = &deserialized_req.enrolled_password_handle;
@@ -164,7 +164,7 @@ TEST(RoundTripTest, VerifyRequest) {
     VerifyRequest deserialized_req;
     deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
 
-    ASSERT_EQ(keyguard::keyguard_error_t::KG_ERROR_OK,
+    ASSERT_EQ(gatekeeper::gatekeeper_error_t::ERROR_NONE,
             deserialized_req.error);
 
     ASSERT_EQ(USER_ID, deserialized_req.user_id);
@@ -190,7 +190,7 @@ TEST(RoundTripTest, VerifyResponse) {
     deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
     delete[] serialized_req;
 
-    ASSERT_EQ(keyguard::keyguard_error_t::KG_ERROR_OK,
+    ASSERT_EQ(gatekeeper::gatekeeper_error_t::ERROR_NONE,
             deserialized_req.error);
 
     ASSERT_EQ(USER_ID, deserialized_req.user_id);

@@ -13,23 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef KEYGUARD_MESSAGES_H_
-#define KEYGUARD_MESSAGES_H_
+#ifndef GATEKEEPER_MESSAGES_H_
+#define GATEKEEPER_MESSAGES_H_
 
 #include <stdint.h>
 #include <UniquePtr.h>
 
 
-#include "keyguard_utils.h"
+#include "gatekeeper_utils.h"
 /**
- * Message serialization objects for communicating with the hardware keyguard.
+ * Message serialization objects for communicating with the hardware gatekeeper.
  */
-namespace keyguard {
+namespace gatekeeper {
 
 typedef enum {
-    KG_ERROR_OK = 0,
-    KG_ERROR_INVALID = 1,
-} keyguard_error_t;
+    ERROR_NONE = 0,
+    ERROR_INVALID = 1,
+} gatekeeper_error_t;
 
 struct SizedBuffer {
     SizedBuffer() {
@@ -68,10 +68,10 @@ struct SizedBuffer {
  * elements like the error and user ID. Delegates specialized serialization
  * to protected pure virtual functions implemented by subclasses.
  */
-struct KeyguardMessage {
-    KeyguardMessage() : error(KG_ERROR_OK) {}
-    KeyguardMessage(keyguard_error_t error) : error(error) {}
-    virtual ~KeyguardMessage() {}
+struct GateKeeperMessage {
+    GateKeeperMessage() : error(ERROR_NONE) {}
+    GateKeeperMessage(gatekeeper_error_t error) : error(error) {}
+    virtual ~GateKeeperMessage() {}
 
     /**
      * Returns serialized size in bytes of the current state of the
@@ -88,7 +88,7 @@ struct KeyguardMessage {
     /**
      * Inflates the object from its serial representation.
      */
-    keyguard_error_t Deserialize(const uint8_t *payload, const uint8_t *end);
+    gatekeeper_error_t Deserialize(const uint8_t *payload, const uint8_t *end);
 
     /**
      * The following methods are intended to be implemented by subclasses.
@@ -111,15 +111,15 @@ struct KeyguardMessage {
     /**
      * Deserializes subclass specific data from payload without reading past end.
      */
-    virtual keyguard_error_t nonErrorDeserialize(const uint8_t *, const uint8_t *) {
-        return KG_ERROR_OK;
+    virtual gatekeeper_error_t nonErrorDeserialize(const uint8_t *, const uint8_t *) {
+        return ERROR_NONE;
     }
 
-    keyguard_error_t error;
+    gatekeeper_error_t error;
     uint32_t user_id;
 };
 
-struct VerifyRequest : public KeyguardMessage {
+struct VerifyRequest : public GateKeeperMessage {
     VerifyRequest(
             uint32_t user_id,
             SizedBuffer *enrolled_password_handle,
@@ -129,13 +129,13 @@ struct VerifyRequest : public KeyguardMessage {
 
     virtual size_t nonErrorSerializedSize() const;
     virtual void nonErrorSerialize(uint8_t *buffer) const;
-    virtual keyguard_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
+    virtual gatekeeper_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
 
     SizedBuffer password_handle;
     SizedBuffer provided_password;
 };
 
-struct VerifyResponse : public KeyguardMessage {
+struct VerifyResponse : public GateKeeperMessage {
     VerifyResponse(uint32_t user_id, SizedBuffer *auth_token);
     VerifyResponse();
     ~VerifyResponse();
@@ -144,12 +144,12 @@ struct VerifyResponse : public KeyguardMessage {
 
     virtual size_t nonErrorSerializedSize() const;
     virtual void nonErrorSerialize(uint8_t *buffer) const;
-    virtual keyguard_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
+    virtual gatekeeper_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
 
     SizedBuffer auth_token;
 };
 
-struct EnrollRequest : public KeyguardMessage {
+struct EnrollRequest : public GateKeeperMessage {
     EnrollRequest(uint32_t user_id, SizedBuffer *password_handle,
             SizedBuffer *provided_password, SizedBuffer *enrolled_password);
     EnrollRequest();
@@ -157,7 +157,7 @@ struct EnrollRequest : public KeyguardMessage {
 
     virtual size_t nonErrorSerializedSize() const;
     virtual void nonErrorSerialize(uint8_t *buffer) const;
-    virtual keyguard_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
+    virtual gatekeeper_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
 
     /**
      * The password handle returned from the previous call to enroll or NULL
@@ -174,7 +174,7 @@ struct EnrollRequest : public KeyguardMessage {
     SizedBuffer provided_password;
 };
 
-struct EnrollResponse : public KeyguardMessage {
+struct EnrollResponse : public GateKeeperMessage {
 public:
     EnrollResponse(uint32_t user_id, SizedBuffer *enrolled_password_handle);
     EnrollResponse();
@@ -184,10 +184,10 @@ public:
 
     virtual size_t nonErrorSerializedSize() const;
     virtual void nonErrorSerialize(uint8_t *buffer) const;
-    virtual keyguard_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
+    virtual gatekeeper_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
 
    SizedBuffer enrolled_password_handle;
 };
 }
 
-#endif // KEYGUARD_MESSAGES_H_
+#endif // GATEKEEPER_MESSAGES_H_

@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef KEYGUARD_FILE_IO_
-#define KEYGUARD_FILE_IO_
+#ifndef NATIVE_GATEKEEPER_FILE_IO_H
+#define NATIVE_GATEKEEPER_FILE_IO_H
 
-#include <keyguard/soft_keyguard.h>
+#include <gatekeeper/soft_gatekeeper.h>
 
-namespace keyguard {
+namespace gatekeeper {
 
-class NativeKeyguardFileIo : public ::keyguard::KeyguardFileIo {
+class NativeGateKeeperFileIo : public ::gatekeeper::GateKeeperFileIo {
 public:
     virtual void Write(const char *filename, const uint8_t *bytes, size_t length) {
         // TODO
@@ -35,4 +35,4 @@ private:
 };
 }
 
-#endif // KEYGUARD_FILE_IO_
+#endif // NATIVE_GATEKEEPER_FILE_IO_H

@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "soft_keyguard_device.h"
+#include "soft_gatekeeper_device.h"
 
-extern struct keyguard_module soft_keyguard_device_module;
+extern struct gatekeeper_module soft_gatekeeper_device_module;
 
-struct keyguard_module HAL_MODULE_INFO_SYM __attribute__((visibility("default")))
-    = soft_keyguard_device_module;
+struct gatekeeper_module HAL_MODULE_INFO_SYM __attribute__((visibility("default")))
+    = soft_gatekeeper_device_module;

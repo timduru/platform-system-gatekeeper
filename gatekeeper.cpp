@@ -18,9 +18,9 @@
 #include <iomanip>
 #include <UniquePtr.h>
 
-#include <keyguard/keyguard.h>
+#include <gatekeeper/gatekeeper.h>
 
-namespace keyguard {
+namespace gatekeeper {
 
 /**
  * Internal only structure for easy serialization
@@ -38,11 +38,11 @@ struct __attribute__ ((__packed__)) password_handle_t {
     uint8_t signature[32];
 };
 
-void Keyguard::Enroll(const EnrollRequest &request, EnrollResponse *response) {
+void GateKeeper::Enroll(const EnrollRequest &request, EnrollResponse *response) {
     if (response == NULL) return;
 
     if (!request.provided_password.buffer.get()) {
-        response->error = KG_ERROR_INVALID;
+        response->error = ERROR_INVALID;
         return;
     }
 
@@ -55,7 +55,7 @@ void Keyguard::Enroll(const EnrollRequest &request, EnrollResponse *response) {
         GetRandom(&user_id, sizeof(secure_id_t));
     } else {
         if (!ValidatePasswordFile(request.user_id, request.password_handle)) {
-           response->error = KG_ERROR_INVALID;
+           response->error = ERROR_INVALID;
            return;
         } else {
             // Password handle matches password file
@@ -63,7 +63,7 @@ void Keyguard::Enroll(const EnrollRequest &request, EnrollResponse *response) {
                 reinterpret_cast<password_handle_t *>(request.password_handle.buffer.get());
             if (!DoVerify(pw_handle, request.enrolled_password)) {
                 // incorrect old password
-                response->error = KG_ERROR_INVALID;
+                response->error = ERROR_INVALID;
                 return;
             }
 
@@ -82,7 +82,7 @@ void Keyguard::Enroll(const EnrollRequest &request, EnrollResponse *response) {
     if(!CreatePasswordHandle(&password_handle,
             salt, user_id, authenticator_id, request.provided_password.buffer.get(),
             request.provided_password.length)) {
-        response->error = KG_ERROR_INVALID;
+        response->error = ERROR_INVALID;
         return;
     }
 
@@ -92,11 +92,11 @@ void Keyguard::Enroll(const EnrollRequest &request, EnrollResponse *response) {
     response->SetEnrolledPasswordHandle(&password_handle);
 }
 
-void Keyguard::Verify(const VerifyRequest &request, VerifyResponse *response) {
+void GateKeeper::Verify(const VerifyRequest &request, VerifyResponse *response) {
     if (response == NULL) return;
 
     if (!request.provided_password.buffer.get() || !request.password_handle.buffer.get()) {
-        response->error = KG_ERROR_INVALID;
+        response->error = ERROR_INVALID;
         return;
     }
 
@@ -106,7 +106,7 @@ void Keyguard::Verify(const VerifyRequest &request, VerifyResponse *response) {
 
     // Sanity check
     if (password_handle->version != HANDLE_VERSION) {
-        response->error = KG_ERROR_INVALID;
+        response->error = ERROR_INVALID;
         return;
     }
 
@@ -133,11 +133,11 @@ void Keyguard::Verify(const VerifyRequest &request, VerifyResponse *response) {
                 user_id, authenticator_id);
         response->SetVerificationToken(&auth_token);
     } else {
-        response->error = KG_ERROR_INVALID;
+        response->error = ERROR_INVALID;
     }
 }
 
-bool Keyguard::CreatePasswordHandle(SizedBuffer *password_handle_buffer, salt_t salt,
+bool GateKeeper::CreatePasswordHandle(SizedBuffer *password_handle_buffer, salt_t salt,
         secure_id_t user_id, secure_id_t authenticator_id, const uint8_t *password,
         size_t password_length) {
     password_handle_buffer->buffer.reset(new uint8_t[sizeof(password_handle_t)]);
@@ -169,7 +169,7 @@ bool Keyguard::CreatePasswordHandle(SizedBuffer *password_handle_buffer, salt_t 
     return true;
 }
 
-bool Keyguard::DoVerify(const password_handle_t *expected_handle, const SizedBuffer &password) {
+bool GateKeeper::DoVerify(const password_handle_t *expected_handle, const SizedBuffer &password) {
     if (!password.buffer.get()) return false;
 
     SizedBuffer provided_handle;
@@ -181,7 +181,7 @@ bool Keyguard::DoVerify(const password_handle_t *expected_handle, const SizedBuf
     return memcmp_s(provided_handle.buffer.get(), expected_handle, sizeof(*expected_handle)) == 0;
 }
 
-bool Keyguard::ValidatePasswordFile(uint32_t uid, const SizedBuffer &provided_handle) {
+bool GateKeeper::ValidatePasswordFile(uint32_t uid, const SizedBuffer &provided_handle) {
     SizedBuffer stored_handle;
     ReadPasswordFile(uid, &stored_handle);
 
@@ -193,7 +193,7 @@ bool Keyguard::ValidatePasswordFile(uint32_t uid, const SizedBuffer &provided_ha
             == 0;
 }
 
-void Keyguard::MintAuthToken(UniquePtr<uint8_t> *auth_token, size_t *length,
+void GateKeeper::MintAuthToken(UniquePtr<uint8_t> *auth_token, size_t *length,
         uint32_t timestamp, secure_id_t user_id, secure_id_t authenticator_id) {
     if (auth_token == NULL) return;
 

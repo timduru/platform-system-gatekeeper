@@ -18,21 +18,21 @@
 #include <UniquePtr.h>
 #include <iostream>
 
-#include <keyguard/soft_keyguard.h>
+#include <gatekeeper/soft_gatekeeper.h>
 
-using ::keyguard::SizedBuffer;
+using ::gatekeeper::SizedBuffer;
 using ::testing::Test;
-using ::keyguard::EnrollRequest;
-using ::keyguard::EnrollResponse;
-using ::keyguard::VerifyRequest;
-using ::keyguard::VerifyResponse;
-using ::keyguard::SoftKeyguard;
-using ::keyguard::AuthToken;
-using ::keyguard::secure_id_t;
+using ::gatekeeper::EnrollRequest;
+using ::gatekeeper::EnrollResponse;
+using ::gatekeeper::VerifyRequest;
+using ::gatekeeper::VerifyResponse;
+using ::gatekeeper::SoftGateKeeper;
+using ::gatekeeper::AuthToken;
+using ::gatekeeper::secure_id_t;
 
-class TestKeyguardFileIo : public ::keyguard::KeyguardFileIo {
+class TestGateKeeperFileIo : public ::gatekeeper::GateKeeperFileIo {
 public:
-    TestKeyguardFileIo() {
+    TestGateKeeperFileIo() {
         bytes_.length = 0;
     }
 
@@ -56,7 +56,7 @@ public:
     SizedBuffer bytes_;
 };
 
-static void do_enroll(SoftKeyguard &keyguard, EnrollResponse *response) {
+static void do_enroll(SoftGateKeeper &gatekeeper, EnrollResponse *response) {
     SizedBuffer password;
 
     password.buffer.reset(new uint8_t[16]);
@@ -64,30 +64,30 @@ static void do_enroll(SoftKeyguard &keyguard, EnrollResponse *response) {
     memset(password.buffer.get(), 0, 16);
     EnrollRequest request(0, NULL, &password, NULL);
 
-    keyguard.Enroll(request, response);
+    gatekeeper.Enroll(request, response);
 }
 
-TEST(KeyguardTest, EnrollSuccess) {
-    SoftKeyguard keyguard(new TestKeyguardFileIo());
+TEST(GateKeeperTest, EnrollSuccess) {
+    SoftGateKeeper gatekeeper(new TestGateKeeperFileIo());
     EnrollResponse response;
-    do_enroll(keyguard, &response);
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_OK, response.error);
+    do_enroll(gatekeeper, &response);
+    ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, response.error);
 }
 
-TEST(KeyguardTest, EnrollBogusData) {
-    SoftKeyguard keyguard(new TestKeyguardFileIo());
+TEST(GateKeeperTest, EnrollBogusData) {
+    SoftGateKeeper gatekeeper(new TestGateKeeperFileIo());
     SizedBuffer password;
     EnrollResponse response;
 
     EnrollRequest request(0, NULL, &password, NULL);
 
-    keyguard.Enroll(request, &response);
+    gatekeeper.Enroll(request, &response);
 
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_INVALID, response.error);
+    ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_INVALID, response.error);
 }
 
-TEST(KeyguardTest, VerifySuccess) {
-    SoftKeyguard keyguard(new TestKeyguardFileIo());
+TEST(GateKeeperTest, VerifySuccess) {
+    SoftGateKeeper gatekeeper(new TestGateKeeperFileIo());
     SizedBuffer provided_password;
     EnrollResponse enroll_response;
 
@@ -95,15 +95,15 @@ TEST(KeyguardTest, VerifySuccess) {
     provided_password.length = 16;
     memset(provided_password.buffer.get(), 0, 16);
 
-    do_enroll(keyguard, &enroll_response);
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_OK, enroll_response.error);
+    do_enroll(gatekeeper, &enroll_response);
+    ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, enroll_response.error);
     VerifyRequest request(0, &enroll_response.enrolled_password_handle,
             &provided_password);
     VerifyResponse response;
 
-    keyguard.Verify(request, &response);
+    gatekeeper.Verify(request, &response);
 
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_OK, response.error);
+    ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, response.error);
 
     AuthToken *auth_token =
         reinterpret_cast<AuthToken *>(response.auth_token.buffer.get());
@@ -114,24 +114,24 @@ TEST(KeyguardTest, VerifySuccess) {
     ASSERT_NE((uint64_t) 0, auth_token->auxiliary_secure_user_id);
 }
 
-TEST(KeyguardTest, VerifyBadPwFile) {
-    TestKeyguardFileIo *fw = new TestKeyguardFileIo();
-    SoftKeyguard keyguard(fw);
+TEST(GateKeeperTest, VerifyBadPwFile) {
+    TestGateKeeperFileIo *fw = new TestGateKeeperFileIo();
+    SoftGateKeeper gatekeeper(fw);
     SizedBuffer provided_password;
     EnrollResponse enroll_response;
 
     provided_password.buffer.reset(new uint8_t[16]);
     provided_password.length = 16;
     memset(provided_password.buffer.get(), 0, 16);
-    do_enroll(keyguard, &enroll_response);
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_OK, enroll_response.error);
+    do_enroll(gatekeeper, &enroll_response);
+    ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, enroll_response.error);
 
     VerifyRequest request(0, &enroll_response.enrolled_password_handle,
             &provided_password);
     VerifyResponse response;
     fw->bytes_.buffer.reset();
-    keyguard.Verify(request, &response);
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_OK, response.error);
+    gatekeeper.Verify(request, &response);
+    ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, response.error);
 
     AuthToken *auth_token =
         reinterpret_cast<AuthToken *>(response.auth_token.buffer.get());
@@ -142,8 +142,8 @@ TEST(KeyguardTest, VerifyBadPwFile) {
     ASSERT_EQ((uint64_t) 0, auth_token->auxiliary_secure_user_id);
 }
 
-TEST(KeyguardTest, TrustedReEnroll) {
-    SoftKeyguard keyguard(new TestKeyguardFileIo());
+TEST(GateKeeperTest, TrustedReEnroll) {
+    SoftGateKeeper gatekeeper(new TestGateKeeperFileIo());
     SizedBuffer provided_password;
     EnrollResponse enroll_response;
     SizedBuffer password_handle;
@@ -152,8 +152,8 @@ TEST(KeyguardTest, TrustedReEnroll) {
     provided_password.buffer.reset(new uint8_t[16]);
     provided_password.length = 16;
     memset(provided_password.buffer.get(), 0, 16);
-    do_enroll(keyguard, &enroll_response);
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_OK, enroll_response.error);
+    do_enroll(gatekeeper, &enroll_response);
+    ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, enroll_response.error);
 
     // keep a copy of the handle
     password_handle.buffer.reset(new uint8_t[enroll_response.enrolled_password_handle.length]);
@@ -165,8 +165,8 @@ TEST(KeyguardTest, TrustedReEnroll) {
     VerifyRequest request(0, &enroll_response.enrolled_password_handle,
             &provided_password);
     VerifyResponse response;
-    keyguard.Verify(request, &response);
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_OK, response.error);
+    gatekeeper.Verify(request, &response);
+    ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, response.error);
     AuthToken *auth_token =
         reinterpret_cast<AuthToken *>(response.auth_token.buffer.get());
 
@@ -181,8 +181,8 @@ TEST(KeyguardTest, TrustedReEnroll) {
     memset(password.buffer.get(), 1, 16);
     password.length = 16;
     EnrollRequest enroll_request(0, &password_handle, &password, &provided_password);
-    keyguard.Enroll(enroll_request, &enroll_response);
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_OK, enroll_response.error);
+    gatekeeper.Enroll(enroll_request, &enroll_response);
+    ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, enroll_response.error);
 
     // verify new password
     password.buffer.reset(new uint8_t[16]);
@@ -190,15 +190,15 @@ TEST(KeyguardTest, TrustedReEnroll) {
     password.length = 16;
     VerifyRequest new_request(0, &enroll_response.enrolled_password_handle,
             &password);
-    keyguard.Verify(new_request, &response);
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_OK, response.error);
+    gatekeeper.Verify(new_request, &response);
+    ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, response.error);
     ASSERT_EQ(secure_id,
         reinterpret_cast<AuthToken *>(response.auth_token.buffer.get())->root_secure_user_id);
 }
 
 
-TEST(KeyguardTest, UntrustedReEnroll) {
-    SoftKeyguard keyguard(new TestKeyguardFileIo());
+TEST(GateKeeperTest, UntrustedReEnroll) {
+    SoftGateKeeper gatekeeper(new TestGateKeeperFileIo());
     SizedBuffer provided_password;
     EnrollResponse enroll_response;
 
@@ -206,15 +206,15 @@ TEST(KeyguardTest, UntrustedReEnroll) {
     provided_password.buffer.reset(new uint8_t[16]);
     provided_password.length = 16;
     memset(provided_password.buffer.get(), 0, 16);
-    do_enroll(keyguard, &enroll_response);
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_OK, enroll_response.error);
+    do_enroll(gatekeeper, &enroll_response);
+    ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, enroll_response.error);
 
     // verify first password
     VerifyRequest request(0, &enroll_response.enrolled_password_handle,
             &provided_password);
     VerifyResponse response;
-    keyguard.Verify(request, &response);
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_OK, response.error);
+    gatekeeper.Verify(request, &response);
+    ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, response.error);
     AuthToken *auth_token =
         reinterpret_cast<AuthToken *>(response.auth_token.buffer.get());
 
@@ -226,8 +226,8 @@ TEST(KeyguardTest, UntrustedReEnroll) {
     memset(password.buffer.get(), 1, 16);
     password.length = 16;
     EnrollRequest enroll_request(0, NULL, &password, NULL);
-    keyguard.Enroll(enroll_request, &enroll_response);
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_OK, enroll_response.error);
+    gatekeeper.Enroll(enroll_request, &enroll_response);
+    ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, enroll_response.error);
 
     // verify new password
     password.buffer.reset(new uint8_t[16]);
@@ -235,22 +235,22 @@ TEST(KeyguardTest, UntrustedReEnroll) {
     password.length = 16;
     VerifyRequest new_request(0, &enroll_response.enrolled_password_handle,
             &password);
-    keyguard.Verify(new_request, &response);
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_OK, response.error);
+    gatekeeper.Verify(new_request, &response);
+    ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, response.error);
     ASSERT_NE(secure_id,
         reinterpret_cast<AuthToken *>(response.auth_token.buffer.get())->root_secure_user_id);
 }
 
 
-TEST(KeyguardTest, VerifyBogusData) {
-    SoftKeyguard keyguard(new TestKeyguardFileIo());
+TEST(GateKeeperTest, VerifyBogusData) {
+    SoftGateKeeper gatekeeper(new TestGateKeeperFileIo());
     SizedBuffer provided_password;
     SizedBuffer password_handle;
     VerifyResponse response;
 
     VerifyRequest request(0, &provided_password, &password_handle);
 
-    keyguard.Verify(request, &response);
+    gatekeeper.Verify(request, &response);
 
-    ASSERT_EQ(::keyguard::keyguard_error_t::KG_ERROR_INVALID, response.error);
+    ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_INVALID, response.error);
 }

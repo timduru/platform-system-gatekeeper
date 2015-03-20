@@ -18,13 +18,13 @@ include $(CLEAR_VARS)
 ifeq ($(USE_32_BIT_KEYSTORE), true)
 LOCAL_MULTILIB := 32
 endif
-LOCAL_MODULE := keyguard.default
+LOCAL_MODULE := gatekeeper.default
 LOCAL_MODULE_RELATIVE_PATH := hw
 LOCAL_SRC_FILES := \
 	module.cpp \
-	soft_keyguard_device.cpp
+	soft_gatekeeper_device.cpp
 LOCAL_CFLAGS = -fvisibility=hidden -Wall -Werror
-LOCAL_SHARED_LIBRARIES := libcrypto libkeyguard
+LOCAL_SHARED_LIBRARIES := libcrypto libgatekeeper
 LOCAL_STATIC_LIBRARIES := libscrypt_static
 LOCAL_C_INCLUDES := external/scrypt/lib/crypto
 LOCAL_MODULE_TAGS := optional

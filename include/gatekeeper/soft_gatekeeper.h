@@ -15,8 +15,8 @@
  *
  */
 
-#ifndef SOFT_KEYGUARD_H_
-#define SOFT_KEYGUARD_H_
+#ifndef SOFT_GATEKEEPER_H_
+#define SOFT_GATEKEEPER_H_
 
 extern "C" {
 #include <openssl/rand.h>
@@ -24,22 +24,22 @@ extern "C" {
 }
 
 #include <UniquePtr.h>
-#include <keyguard/keyguard.h>
+#include <gatekeeper/gatekeeper.h>
 #include <iostream>
 
-namespace keyguard {
+namespace gatekeeper {
 
 /**
  * Convenience class for easily switching out a testing implementation
  */
-class KeyguardFileIo {
+class GateKeeperFileIo {
 public:
-    virtual ~KeyguardFileIo() {}
+    virtual ~GateKeeperFileIo() {}
     virtual void Write(const char *filename, const uint8_t *bytes, size_t length) = 0;
     virtual size_t Read(const char *filename, UniquePtr<uint8_t> *bytes) const = 0;
 };
 
-class SoftKeyguard : public Keyguard {
+class SoftGateKeeper : public GateKeeper {
 public:
     static const size_t SALT_LENGTH = 8;
     static const size_t SIGNATURE_LENGTH = 16;
@@ -51,11 +51,11 @@ public:
 
     static const int MAX_UINT_32_CHARS = 11;
 
-    SoftKeyguard(KeyguardFileIo *file_io) {
+    SoftGateKeeper(GateKeeperFileIo *file_io) {
         file_io_ = file_io;
     }
 
-    virtual ~SoftKeyguard() {
+    virtual ~SoftGateKeeper() {
         delete file_io_;
     }
 
@@ -107,9 +107,9 @@ public:
     }
 
 private:
-    KeyguardFileIo *file_io_;
+    GateKeeperFileIo *file_io_;
 };
 }
 
-#endif // SOFT_KEYGUARD_H_
+#endif // SOFT_GATEKEEPER_H_
 

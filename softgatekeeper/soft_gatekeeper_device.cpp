@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-#include "soft_keyguard_device.h"
-#include "native_keyguard_file_io.h"
+#include "soft_gatekeeper_device.h"
+#include "native_gatekeeper_file_io.h"
 
 __attribute__((visibility("default")))
-int softkeyguard_device_open(const hw_module_t *module, const char *name, hw_device_t **device) {
-    if (device == NULL || strcmp(name, HARDWARE_KEYGUARD) != 0)
+int softgatekeeper_device_open(const hw_module_t *module, const char *name, hw_device_t **device) {
+    if (device == NULL || strcmp(name, HARDWARE_GATEKEEPER) != 0)
         return -EINVAL;
 
-    keyguard::SoftKeyguardDevice *dev = new keyguard::SoftKeyguardDevice(module);
+    gatekeeper::SoftGateKeeperDevice *dev = new gatekeeper::SoftGateKeeperDevice(module);
     if (dev == NULL)
         return -ENOMEM;
 
@@ -31,39 +31,39 @@ int softkeyguard_device_open(const hw_module_t *module, const char *name, hw_dev
 }
 
 
-static struct hw_module_methods_t keyguard_module_methods  = {
-    .open = softkeyguard_device_open,
+static struct hw_module_methods_t gatekeeper_module_methods  = {
+    .open = softgatekeeper_device_open,
 };
 
 __attribute__((visibility("default")))
-struct keyguard_module soft_keyguard_device_module = {
+struct gatekeeper_module soft_gatekeeper_device_module = {
     .common =
         {
          .tag = HARDWARE_MODULE_TAG,
-         .module_api_version = KEYGUARD_MODULE_API_VERSION_0_1,
+         .module_api_version = GATEKEEPER_MODULE_API_VERSION_0_1,
          .hal_api_version = HARDWARE_HAL_API_VERSION,
-         .id = KEYGUARD_HARDWARE_MODULE_ID,
-         .name = "Keyguard SCrypt HAL",
+         .id = GATEKEEPER_HARDWARE_MODULE_ID,
+         .name = "GateKeeper SCrypt HAL",
          .author = "The Android Open Source Project",
-         .methods = &keyguard_module_methods,
+         .methods = &gatekeeper_module_methods,
          .dso = 0,
          .reserved = {},
         },
 };
 
-namespace keyguard {
+namespace gatekeeper {
 
-SoftKeyguardDevice::SoftKeyguardDevice(const hw_module_t *module)
-    : impl_(new SoftKeyguard(new NativeKeyguardFileIo())) {
+SoftGateKeeperDevice::SoftGateKeeperDevice(const hw_module_t *module)
+    : impl_(new SoftGateKeeper(new NativeGateKeeperFileIo())) {
 #if __cplusplus >= 201103L || defined(__GXX_EXPERIMENTAL_CXX0X__)
-    static_assert(std::is_standard_layout<SoftKeyguardDevice>::value,
-                  "SoftKeyguardDevice must be standard layout");
-    static_assert(offsetof(SoftKeyguardDevice, device_) == 0,
+    static_assert(std::is_standard_layout<SoftGateKeeperDevice>::value,
+                  "SoftGateKeeperDevice must be standard layout");
+    static_assert(offsetof(SoftGateKeeperDevice, device_) == 0,
                   "device_ must be the first member of KeymasterOpenSsl");
-    static_assert(offsetof(SoftKeyguardDevice, device_.common) == 0,
+    static_assert(offsetof(SoftGateKeeperDevice, device_.common) == 0,
                   "common must be the first member of keymaster_device");
 #else
-    assert(reinterpret_cast<keyguard_device*>(this) == &device_);
+    assert(reinterpret_cast<gatekeeper_device*>(this) == &device_);
     assert(reinterpret_cast<hw_device_t*>(this) == &(device_.common));
 #endif
 
@@ -77,21 +77,21 @@ SoftKeyguardDevice::SoftKeyguardDevice(const hw_module_t *module)
     device_.enroll = Enroll;
 }
 
-hw_device_t *SoftKeyguardDevice::hw_device() {
+hw_device_t *SoftGateKeeperDevice::hw_device() {
     return &device_.common;
 }
 
-static inline SoftKeyguardDevice *convert_device(const struct keyguard_device *dev) {
-    return reinterpret_cast<SoftKeyguardDevice *>(const_cast<keyguard_device *>(dev));
+static inline SoftGateKeeperDevice *convert_device(const struct gatekeeper_device *dev) {
+    return reinterpret_cast<SoftGateKeeperDevice *>(const_cast<gatekeeper_device *>(dev));
 }
 
 /* static */
-int SoftKeyguardDevice::close_device(hw_device_t* dev) {
-    delete reinterpret_cast<SoftKeyguardDevice *>(dev);
+int SoftGateKeeperDevice::close_device(hw_device_t* dev) {
+    delete reinterpret_cast<SoftGateKeeperDevice *>(dev);
     return 0;
 }
 
-int SoftKeyguardDevice::Enroll(const struct keyguard_device *dev, uint32_t uid,
+int SoftGateKeeperDevice::Enroll(const struct gatekeeper_device *dev, uint32_t uid,
             const uint8_t *current_password_handle, size_t current_password_handle_length,
             const uint8_t *current_password, size_t current_password_length,
             const uint8_t *desired_password, size_t desired_password_length,
@@ -131,7 +131,7 @@ int SoftKeyguardDevice::Enroll(const struct keyguard_device *dev, uint32_t uid,
 
     convert_device(dev)->impl_->Enroll(request, &response);
 
-    if (response.error != KG_ERROR_OK)
+    if (response.error != ERROR_NONE)
         return -EINVAL;
 
     *enrolled_password_handle = response.enrolled_password_handle.buffer.release();
@@ -139,7 +139,7 @@ int SoftKeyguardDevice::Enroll(const struct keyguard_device *dev, uint32_t uid,
     return 0;
 }
 
-int SoftKeyguardDevice::Verify(const struct keyguard_device *dev, uint32_t uid,
+int SoftGateKeeperDevice::Verify(const struct gatekeeper_device *dev, uint32_t uid,
         const uint8_t *enrolled_password_handle, size_t enrolled_password_handle_length,
         const uint8_t *provided_password, size_t provided_password_length,
         uint8_t **auth_token, size_t *auth_token_length) {
@@ -159,7 +159,7 @@ int SoftKeyguardDevice::Verify(const struct keyguard_device *dev, uint32_t uid,
 
     convert_device(dev)->impl_->Verify(request, &response);
 
-    if (response.error != KG_ERROR_OK)
+    if (response.error != ERROR_NONE)
        return -EINVAL;
 
     if (auth_token != NULL && auth_token_length != NULL) {

@@ -14,39 +14,39 @@
  * limitations under the License.
  */
 #include <gtest/gtest.h>
-#include <hardware/keyguard.h>
+#include <hardware/gatekeeper.h>
 
 using ::testing::Test;
 
-class KeyguardDeviceTest : public virtual Test {
+class GateKeeperDeviceTest : public virtual Test {
 public:
-    KeyguardDeviceTest() {}
-    virtual ~KeyguardDeviceTest() {}
+    GateKeeperDeviceTest() {}
+    virtual ~GateKeeperDeviceTest() {}
 
     virtual void SetUp() {
-        keyguard_device_initialize(&device);
+        gatekeeper_device_initialize(&device);
     }
 
     virtual void TearDown() {
-        keyguard_close(device);
+        gatekeeper_close(device);
     }
 
-    static void keyguard_device_initialize(keyguard_device_t **dev) {
+    static void gatekeeper_device_initialize(gatekeeper_device_t **dev) {
         int ret;
         const hw_module_t *mod;
-        ret = hw_get_module_by_class(KEYGUARD_HARDWARE_MODULE_ID, NULL, &mod);
+        ret = hw_get_module_by_class(GATEKEEPER_HARDWARE_MODULE_ID, NULL, &mod);
 
         ASSERT_EQ(0, ret);
 
-        ret = keyguard_open(mod, dev);
+        ret = gatekeeper_open(mod, dev);
 
         ASSERT_EQ(0, ret);
     }
 
-    keyguard_device_t *device;
+    gatekeeper_device_t *device;
 };
 
-TEST_F(KeyguardDeviceTest, EnrollAndVerify) {
+TEST_F(GateKeeperDeviceTest, EnrollAndVerify) {
     size_t password_len = 50;
     uint8_t password_payload[password_len];
     uint8_t *password_handle;
@@ -66,7 +66,7 @@ TEST_F(KeyguardDeviceTest, EnrollAndVerify) {
     ASSERT_EQ(0, ret);
 }
 
-TEST_F(KeyguardDeviceTest, EnrollAndVerifyBadPassword) {
+TEST_F(GateKeeperDeviceTest, EnrollAndVerifyBadPassword) {
     size_t password_len = 50;
     uint8_t password_payload[password_len];
     uint8_t *password_handle;

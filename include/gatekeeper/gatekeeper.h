@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#ifndef KEYGUARD_H_
-#define KEYGUARD_H_
+#ifndef GATEKEEPER_H_
+#define GATEKEEPER_H_
 
 #include <memory>
 #include <stdint.h>
 #include <UniquePtr.h>
 
-#include "keyguard_messages.h"
+#include "gatekeeper_messages.h"
 
-namespace keyguard {
+namespace gatekeeper {
 
 typedef uint64_t secure_id_t;
 typedef uint64_t salt_t;
@@ -48,14 +48,14 @@ struct __attribute__ ((__packed__)) AuthToken {
 struct password_handle_t;
 
 /**
- * Base class for keyguard implementations. Provides all functionality except
+ * Base class for gatekeeper implementations. Provides all functionality except
  * the ability to create/access keys and compute signatures. These are left up
  * to the platform-specific implementation.
  */
-class Keyguard {
+class GateKeeper {
 public:
-    Keyguard() {}
-    virtual ~Keyguard() {}
+    GateKeeper() {}
+    virtual ~GateKeeper() {}
 
     void Enroll(const EnrollRequest &request, EnrollResponse *response);
     void Verify(const VerifyRequest &request, VerifyResponse *response);
@@ -65,7 +65,7 @@ protected:
     // The following methods are intended to be implemented by concrete subclasses
 
     /**
-     * Retrieves the key used by Keyguard::MintAuthToken to sign the payload
+     * Retrieves the key used by GateKeeper::MintAuthToken to sign the payload
      * of the AuthToken. This is not cached as is may have changed due to an event such
      * as a password change.
      *
@@ -158,4 +158,4 @@ private:
 
 }
 
-#endif // KEYGUARD_H_
+#endif // GATEKEEPER_H_

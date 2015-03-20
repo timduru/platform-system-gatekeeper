@@ -15,12 +15,12 @@
  *
  */
 
-#include <keyguard/keyguard_messages.h>
+#include <gatekeeper/gatekeeper_messages.h>
 
 #include <string.h>
 
 
-namespace keyguard {
+namespace gatekeeper {
 
 /**
  * Methods for serializing/deserializing SizedBuffers
@@ -39,34 +39,34 @@ static inline void append_to_buffer(uint8_t **buffer, const SizedBuffer *to_appe
     }
 }
 
-static inline keyguard_error_t read_from_buffer(const uint8_t **buffer, const uint8_t *end,
+static inline gatekeeper_error_t read_from_buffer(const uint8_t **buffer, const uint8_t *end,
         SizedBuffer *target) {
-    if (*buffer + sizeof(target->length) > end) return KG_ERROR_INVALID;
+    if (*buffer + sizeof(target->length) > end) return ERROR_INVALID;
 
     memcpy(&target->length, *buffer, sizeof(target->length));
     *buffer += sizeof(target->length);
     if (target->length != 0) {
         const uint8_t *buffer_end = *buffer + target->length;
-        if (buffer_end > end || buffer_end <= *buffer) return KG_ERROR_INVALID;
+        if (buffer_end > end || buffer_end <= *buffer) return ERROR_INVALID;
 
         target->buffer.reset(new uint8_t[target->length]);
         memcpy(target->buffer.get(), *buffer, target->length);
         *buffer += target->length;
     }
-    return KG_ERROR_OK;
+    return ERROR_NONE;
 }
 
 
-size_t KeyguardMessage::GetSerializedSize() const {
-    if (error == KG_ERROR_OK) {
+size_t GateKeeperMessage::GetSerializedSize() const {
+    if (error == ERROR_NONE) {
         return 2 * sizeof(uint32_t) + nonErrorSerializedSize();
     } else {
         return sizeof(uint32_t);
     }
 }
 
-uint8_t *KeyguardMessage::Serialize() const {
-    if (error != KG_ERROR_OK) {
+uint8_t *GateKeeperMessage::Serialize() const {
+    if (error != ERROR_NONE) {
         uint32_t *error_buf = new uint32_t;
         *error_buf = static_cast<uint32_t>(error);
         return reinterpret_cast<uint8_t *>(error_buf);
@@ -80,14 +80,14 @@ uint8_t *KeyguardMessage::Serialize() const {
     }
 }
 
-keyguard_error_t KeyguardMessage::Deserialize(const uint8_t *payload, const uint8_t *end) {
+gatekeeper_error_t GateKeeperMessage::Deserialize(const uint8_t *payload, const uint8_t *end) {
     uint32_t error_value;
-    if (payload + sizeof(uint32_t) > end) return KG_ERROR_INVALID;
+    if (payload + sizeof(uint32_t) > end) return ERROR_INVALID;
     memcpy(&error_value, payload, sizeof(uint32_t));
-    error = static_cast<keyguard_error_t>(error_value);
+    error = static_cast<gatekeeper_error_t>(error_value);
     payload += sizeof(uint32_t);
-    if (error == KG_ERROR_OK) {
-        if (payload == end) return KG_ERROR_INVALID;
+    if (error == ERROR_NONE) {
+        if (payload == end) return ERROR_INVALID;
         user_id = *((uint32_t *) payload);
         error = nonErrorDeserialize(payload + sizeof(uint32_t), end);
     }
@@ -130,8 +130,8 @@ void VerifyRequest::nonErrorSerialize(uint8_t *buffer) const {
     append_to_buffer(&buffer, &provided_password);
 }
 
-keyguard_error_t VerifyRequest::nonErrorDeserialize(const uint8_t *payload, const uint8_t *end) {
-    keyguard_error_t error = KG_ERROR_OK;
+gatekeeper_error_t VerifyRequest::nonErrorDeserialize(const uint8_t *payload, const uint8_t *end) {
+    gatekeeper_error_t error = ERROR_NONE;
 
     if (password_handle.buffer.get()) {
         password_handle.buffer.reset();
@@ -143,7 +143,7 @@ keyguard_error_t VerifyRequest::nonErrorDeserialize(const uint8_t *payload, cons
     }
 
     error = read_from_buffer(&payload, end, &password_handle);
-    if (error != KG_ERROR_OK) return error;
+    if (error != ERROR_NONE) return error;
 
     return read_from_buffer(&payload, end, &provided_password);
 
@@ -178,7 +178,7 @@ void VerifyResponse::nonErrorSerialize(uint8_t *buffer) const {
     append_to_buffer(&buffer, &auth_token);
 }
 
-keyguard_error_t VerifyResponse::nonErrorDeserialize(const uint8_t *payload, const uint8_t *end) {
+gatekeeper_error_t VerifyResponse::nonErrorDeserialize(const uint8_t *payload, const uint8_t *end) {
     if (auth_token.buffer.get()) {
         auth_token.buffer.reset();
     }
@@ -243,8 +243,8 @@ void EnrollRequest::nonErrorSerialize(uint8_t *buffer) const {
     append_to_buffer(&buffer, &password_handle);
 }
 
-keyguard_error_t EnrollRequest::nonErrorDeserialize(const uint8_t *payload, const uint8_t *end) {
-    keyguard_error_t ret;
+gatekeeper_error_t EnrollRequest::nonErrorDeserialize(const uint8_t *payload, const uint8_t *end) {
+    gatekeeper_error_t ret;
     if (provided_password.buffer.get()) {
         memset_s(provided_password.buffer.get(), 0, provided_password.length);
         provided_password.buffer.reset();
@@ -261,12 +261,12 @@ keyguard_error_t EnrollRequest::nonErrorDeserialize(const uint8_t *payload, cons
     }
 
      ret = read_from_buffer(&payload, end, &provided_password);
-     if (ret != KG_ERROR_OK) {
+     if (ret != ERROR_NONE) {
          return ret;
      }
 
      ret = read_from_buffer(&payload, end, &enrolled_password);
-     if (ret != KG_ERROR_OK) {
+     if (ret != ERROR_NONE) {
          return ret;
      }
 
@@ -302,7 +302,7 @@ void EnrollResponse::nonErrorSerialize(uint8_t *buffer) const {
     append_to_buffer(&buffer, &enrolled_password_handle);
 }
 
-keyguard_error_t EnrollResponse::nonErrorDeserialize(const uint8_t *payload, const uint8_t *end) {
+gatekeeper_error_t EnrollResponse::nonErrorDeserialize(const uint8_t *payload, const uint8_t *end) {
     if (enrolled_password_handle.buffer.get()) {
         enrolled_password_handle.buffer.reset();
     }

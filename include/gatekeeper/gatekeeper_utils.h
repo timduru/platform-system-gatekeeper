@@ -14,12 +14,12 @@
  * limitations under the License.
  *
  */
-#ifndef GOOGLE_KEYGUARD_UTILS_H_
-#define GOOGLE_KEYGUARD_UTILS_H_
+#ifndef GOOGLE_GATEKEEPER_UTILS_H_
+#define GOOGLE_GATEKEEPER_UTILS_H_
 
 #include <string.h>
 
-namespace keyguard {
+namespace gatekeeper {
 /**
  * Variant of memset() that uses GCC-specific pragmas to disable optimizations, so effect is not
  * optimized away.  This is important because we often need to wipe blocks of sensitive data from
@@ -54,4 +54,4 @@ static int memcmp_s(const void* p1, const void* p2, size_t length) {
 }
 
 };
-#endif //GOOGLE_KEYGUARD_UTILS_H_
+#endif //GOOGLE_GATEKEEPER_UTILS_H_
