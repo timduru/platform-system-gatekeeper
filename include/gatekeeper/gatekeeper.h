@@ -69,12 +69,12 @@ protected:
      * of the AuthToken. This is not cached as is may have changed due to an event such
      * as a password change.
      *
-     * Assigns the auth token to the auth_token_key UniquePtr, relinquishing ownership
-     * to the caller.
      * Writes the length in bytes of the returned key to length if it is not null.
      *
+     * Ownership of the auth_token_key pointer is maintained by the implementor.
+     *
      */
-    virtual void GetAuthTokenKey(UniquePtr<uint8_t> *auth_token_key, size_t *length)
+    virtual void GetAuthTokenKey(const uint8_t **auth_token_key, size_t *length)
         const = 0;
     /**
      * The key used to sign and verify password data.
@@ -82,10 +82,12 @@ protected:
      * MUST be different from the AuthTokenKey.
      *
      * GetPasswordKey is not const because unlike AuthTokenKey,
-     * this value can and should be cached in local memory. The
+     * this value can be cached.
+     *
+     * Ownership of the password_key pointer is maintained by the implementor.
      *
      */
-    virtual void GetPasswordKey(UniquePtr<uint8_t> *password_key, size_t *length) = 0;
+    virtual void GetPasswordKey(const uint8_t **password_key, size_t *length) = 0;
 
     /**
      * Uses platform-specific routines to compute a signature on the provided password.
@@ -133,6 +135,7 @@ protected:
      * Should return 0 on error.
      */
     virtual uint64_t GetNanosecondsSinceBoot() const = 0;
+
 private:
     /**
      * Generates a signed attestation of an authentication event and assings

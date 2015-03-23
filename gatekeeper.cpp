@@ -150,16 +150,16 @@ bool GateKeeper::CreatePasswordHandle(SizedBuffer *password_handle_buffer, salt_
     memcpy(to_sign, &password_handle->version, metadata_length);
     memcpy(to_sign + metadata_length, password, password_length);
 
-    UniquePtr<uint8_t> password_key;
+    const uint8_t *password_key = NULL;
     size_t password_key_length = 0;
     GetPasswordKey(&password_key, &password_key_length);
 
-    if (!password_key.get() || password_key_length == 0) {
+    if (!password_key || password_key_length == 0) {
         return false;
     }
 
     ComputePasswordSignature(password_handle->signature, sizeof(password_handle->signature),
-            password_key.get(), password_key_length, to_sign, sizeof(to_sign), salt);
+            password_key, password_key_length, to_sign, sizeof(to_sign), salt);
     return true;
 }
 
@@ -198,12 +198,12 @@ void GateKeeper::MintAuthToken(UniquePtr<uint8_t> *auth_token, size_t *length,
     token->auxiliary_secure_user_id = authenticator_id;
     token->timestamp = timestamp;
 
-    UniquePtr<uint8_t> auth_token_key;
-    size_t key_len;
+    const uint8_t *auth_token_key = NULL;
+    size_t key_len = 0;
     GetAuthTokenKey(&auth_token_key, &key_len);
 
     size_t hash_len = (size_t)((uint8_t *)&token->hmac - (uint8_t *)token);
-    ComputeSignature(token->hmac, sizeof(token->hmac), auth_token_key.get(), key_len,
+    ComputeSignature(token->hmac, sizeof(token->hmac), auth_token_key, key_len,
             reinterpret_cast<uint8_t *>(token), hash_len);
 
     if (length != NULL) *length = sizeof(AuthToken);

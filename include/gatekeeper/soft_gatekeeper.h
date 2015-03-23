@@ -41,8 +41,7 @@ public:
 
 class SoftGateKeeper : public GateKeeper {
 public:
-    static const size_t SALT_LENGTH = 8;
-    static const size_t SIGNATURE_LENGTH = 16;
+    static const size_t SIGNATURE_LENGTH_BYTES = 32;
 
     // scrypt params
     static const uint64_t N = 16384;
@@ -53,23 +52,25 @@ public:
 
     SoftGateKeeper(GateKeeperFileIo *file_io) {
         file_io_ = file_io;
+        key_.reset(new uint8_t[SIGNATURE_LENGTH_BYTES]);
+        memset(key_.get(), 0, SIGNATURE_LENGTH_BYTES);
     }
 
     virtual ~SoftGateKeeper() {
         delete file_io_;
     }
 
-    virtual void GetAuthTokenKey(UniquePtr<uint8_t> *auth_token_key,
+    virtual void GetAuthTokenKey(const uint8_t **auth_token_key,
             size_t *length) const {
-        auth_token_key->reset(new uint8_t[SIGNATURE_LENGTH]);
-        memset(auth_token_key->get(), 0, SIGNATURE_LENGTH);
-        if (length != NULL) *length = SIGNATURE_LENGTH;
+        if (auth_token_key == NULL || length == NULL) return;
+        *auth_token_key = const_cast<const uint8_t *>(key_.get());
+        *length = SIGNATURE_LENGTH_BYTES;
     }
 
-    virtual void GetPasswordKey(UniquePtr<uint8_t> *password_key, size_t *length) {
-        password_key->reset(new uint8_t[SIGNATURE_LENGTH]);
-        memset(password_key->get(), 0, SIGNATURE_LENGTH);
-        if (length != NULL) *length = SIGNATURE_LENGTH;
+    virtual void GetPasswordKey(const uint8_t **password_key, size_t *length) {
+        if (password_key == NULL || length == NULL) return;
+        *password_key = const_cast<const uint8_t *>(key_.get());
+        *length = SIGNATURE_LENGTH_BYTES;
     }
 
     virtual void ComputePasswordSignature(uint8_t *signature, size_t signature_length,
@@ -114,6 +115,7 @@ public:
     }
 private:
     GateKeeperFileIo *file_io_;
+    UniquePtr<uint8_t> key_;
 };
 }
 
