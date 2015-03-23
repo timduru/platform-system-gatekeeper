@@ -127,6 +127,12 @@ protected:
      */
     virtual void WritePasswordFile(uint32_t uid, const SizedBuffer &password_file) const = 0;
 
+    /**
+     * Get the time since boot in nanoseconds.
+     *
+     * Should return 0 on error.
+     */
+    virtual uint64_t GetNanosecondsSinceBoot() const = 0;
 private:
     /**
      * Generates a signed attestation of an authentication event and assings

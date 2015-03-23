@@ -13,9 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <time.h>
-#include <iostream>
-#include <iomanip>
 #include <UniquePtr.h>
 
 #include <gatekeeper/gatekeeper.h>
@@ -121,10 +118,7 @@ void GateKeeper::Verify(const VerifyRequest &request, VerifyResponse *response) 
         authenticator_id = password_handle->authenticator_id;
     }
 
-    struct timespec time;
-    uint64_t timestamp;
-    clock_gettime(CLOCK_MONOTONIC_RAW, &time);
-    timestamp = static_cast<uint32_t>(time.tv_sec);
+    uint64_t timestamp = GetNanosecondsSinceBoot();
 
     if (DoVerify(password_handle, request.provided_password)) {
         // Signature matches

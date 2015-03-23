@@ -106,6 +106,12 @@ public:
         file_io_->Write(buf, password_file.buffer.get(), password_file.length);
     }
 
+    virtual uint64_t GetNanosecondsSinceBoot() const {
+        struct timespec time;
+        int res = clock_gettime(CLOCK_MONOTONIC_RAW, &time);
+        if (res < 0) return 0;
+        return time.tv_nsec;
+    }
 private:
     GateKeeperFileIo *file_io_;
 };
