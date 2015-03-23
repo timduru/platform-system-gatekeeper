@@ -17,7 +17,6 @@
 #ifndef GATEKEEPER_H_
 #define GATEKEEPER_H_
 
-#include <memory>
 #include <stdint.h>
 #include <UniquePtr.h>
 
@@ -37,10 +36,10 @@ typedef uint64_t salt_t;
  */
 const uint8_t AUTH_TOKEN_VERSION = 0;
 struct __attribute__ ((__packed__)) AuthToken {
-    uint8_t auth_token_version = AUTH_TOKEN_VERSION;
+    uint8_t auth_token_version;
     secure_id_t root_secure_user_id;
     secure_id_t auxiliary_secure_user_id;
-    uint32_t authenticator_id = 0;
+    uint32_t authenticator_id;
     uint32_t timestamp;
     uint8_t hmac[32];
 };

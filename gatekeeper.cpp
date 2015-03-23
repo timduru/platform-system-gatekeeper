@@ -26,7 +26,7 @@ namespace gatekeeper {
 static const uint8_t HANDLE_VERSION = 0;
 struct __attribute__ ((__packed__)) password_handle_t {
     // fields included in signature
-    uint8_t version = HANDLE_VERSION;
+    uint8_t version;
     secure_id_t user_id;
     secure_id_t authenticator_id;
 
@@ -44,8 +44,6 @@ void GateKeeper::Enroll(const EnrollRequest &request, EnrollResponse *response) 
     }
 
     secure_id_t user_id = 0;
-    uint8_t *current_password = NULL;
-    size_t current_password_size = 0;
 
     if (request.password_handle.buffer.get() == NULL) {
         // Password handle does not match what is stored, generate new SecureID
@@ -194,8 +192,10 @@ void GateKeeper::MintAuthToken(UniquePtr<uint8_t> *auth_token, size_t *length,
     AuthToken *token = new AuthToken;
     SizedBuffer serialized_auth_token;
 
+    token->auth_token_version = AUTH_TOKEN_VERSION;
     token->root_secure_user_id = user_id;
     token->auxiliary_secure_user_id = authenticator_id;
+    token->authenticator_id = 0;
     token->timestamp = timestamp;
 
     const uint8_t *auth_token_key = NULL;
