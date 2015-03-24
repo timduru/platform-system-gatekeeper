@@ -52,10 +52,12 @@ TEST(RoundTripTest, EnrollRequestNullEnrolledNullHandle) {
     const SizedBuffer *deserialized_password;
     // create request, serialize, deserialize, and validate
     EnrollRequest req(USER_ID, NULL, provided_password, NULL);
-    uint8_t *serialized_req = req.Serialize();
+    SizedBuffer serialized_req(req.GetSerializedSize());
+    req.Serialize(serialized_req.buffer.get(), serialized_req.buffer.get() + serialized_req.length);
+
     EnrollRequest deserialized_req;
-    deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
-    delete[] serialized_req;
+    deserialized_req.Deserialize(serialized_req.buffer.get(), serialized_req.buffer.get()
+            + serialized_req.length);
 
     ASSERT_EQ(gatekeeper::gatekeeper_error_t::ERROR_NONE,
             deserialized_req.error);
@@ -79,10 +81,12 @@ TEST(RoundTripTest, EnrollRequestEmptyEnrolledEmptyHandle) {
     const SizedBuffer *deserialized_password;
     // create request, serialize, deserialize, and validate
     EnrollRequest req(USER_ID, &handle, provided_password, &enrolled);
-    uint8_t *serialized_req = req.Serialize();
+    SizedBuffer serialized_req(req.GetSerializedSize());
+    req.Serialize(serialized_req.buffer.get(), serialized_req.buffer.get() + serialized_req.length);
+
     EnrollRequest deserialized_req;
-    deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
-    delete[] serialized_req;
+    deserialized_req.Deserialize(serialized_req.buffer.get(), serialized_req.buffer.get()
+            + serialized_req.length);
 
     ASSERT_EQ(gatekeeper::gatekeeper_error_t::ERROR_NONE,
             deserialized_req.error);
@@ -108,10 +112,12 @@ TEST(RoundTripTest, EnrollRequestNonNullEnrolledOrHandle) {
     const SizedBuffer *deserialized_handle;
     // create request, serialize, deserialize, and validate
     EnrollRequest req(USER_ID, password_handle, provided_password, enrolled_password);
-    uint8_t *serialized_req = req.Serialize();
+    SizedBuffer serialized_req(req.GetSerializedSize());
+    req.Serialize(serialized_req.buffer.get(), serialized_req.buffer.get() + serialized_req.length);
+
     EnrollRequest deserialized_req;
-    deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
-    delete[] serialized_req;
+    deserialized_req.Deserialize(serialized_req.buffer.get(), serialized_req.buffer.get()
+            + serialized_req.length);
 
     ASSERT_EQ(gatekeeper::gatekeeper_error_t::ERROR_NONE,
             deserialized_req.error);
@@ -138,10 +144,12 @@ TEST(RoundTripTest, EnrollResponse) {
     const SizedBuffer *deserialized_password;
     // create request, serialize, deserialize, and validate
     EnrollResponse req(USER_ID, enrolled_password);
-    uint8_t *serialized_req = req.Serialize();
+    SizedBuffer serialized_req(req.GetSerializedSize());
+    req.Serialize(serialized_req.buffer.get(), serialized_req.buffer.get() + serialized_req.length);
+
     EnrollResponse deserialized_req;
-    deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
-    delete[] serialized_req;
+    deserialized_req.Deserialize(serialized_req.buffer.get(), serialized_req.buffer.get()
+            + serialized_req.length);
 
     ASSERT_EQ(gatekeeper::gatekeeper_error_t::ERROR_NONE,
             deserialized_req.error);
@@ -160,9 +168,12 @@ TEST(RoundTripTest, VerifyRequest) {
     const SizedBuffer *deserialized_password;
     // create request, serialize, deserialize, and validate
     VerifyRequest req(USER_ID, password_handle, provided_password);
-    uint8_t *serialized_req = req.Serialize();
+    SizedBuffer serialized_req(req.GetSerializedSize());
+    req.Serialize(serialized_req.buffer.get(), serialized_req.buffer.get() + serialized_req.length);
+
     VerifyRequest deserialized_req;
-    deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
+    deserialized_req.Deserialize(serialized_req.buffer.get(), serialized_req.buffer.get()
+            + serialized_req.length);
 
     ASSERT_EQ(gatekeeper::gatekeeper_error_t::ERROR_NONE,
             deserialized_req.error);
@@ -185,10 +196,12 @@ TEST(RoundTripTest, VerifyResponse) {
     const SizedBuffer *deserialized_password;
     // create request, serialize, deserialize, and validate
     VerifyResponse req(USER_ID, auth_token);
-    uint8_t *serialized_req = req.Serialize();
+    SizedBuffer serialized_req(req.GetSerializedSize());
+    req.Serialize(serialized_req.buffer.get(), serialized_req.buffer.get() + serialized_req.length);
+
     VerifyResponse deserialized_req;
-    deserialized_req.Deserialize(serialized_req, serialized_req + req.GetSerializedSize());
-    delete[] serialized_req;
+    deserialized_req.Deserialize(serialized_req.buffer.get(), serialized_req.buffer.get()
+            + serialized_req.length);
 
     ASSERT_EQ(gatekeeper::gatekeeper_error_t::ERROR_NONE,
             deserialized_req.error);

@@ -83,10 +83,12 @@ struct GateKeeperMessage {
     size_t GetSerializedSize() const;
     /**
      * Converts the object into its serialized representation.
-     * The returned buffer's ownwership is tranferred to the caller.
-     * TODO: make this return a unique_ptr so that this is clear
+     *
+     * Expects payload to be allocated with GetSerializedSize bytes.
+     *
+     * Returns the number of bytes written or 0 on error.
      */
-    uint8_t *Serialize() const;
+    size_t Serialize(uint8_t *payload, const uint8_t *end) const;
 
     /**
      * Inflates the object from its serial representation.
@@ -106,7 +108,7 @@ struct GateKeeperMessage {
     virtual size_t nonErrorSerializedSize() const { return 0; } ;
     /**
      * Takes a pointer to a buffer prepared by Serialize and writes
-     * the subclass specific data into it. The size of the buffer is exaclty
+     * the subclass specific data into it. The size of the buffer must be exactly
      * that returned by nonErrorSerializedSize() in bytes.
      */
     virtual void nonErrorSerialize(uint8_t *) const { }

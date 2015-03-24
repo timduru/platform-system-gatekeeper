@@ -26,6 +26,11 @@ namespace gatekeeper {
  * Methods for serializing/deserializing SizedBuffers
  */
 
+struct serial_header_t {
+    uint32_t error;
+    uint32_t user_id;
+};
+
 static inline size_t serialized_buffer_size(const SizedBuffer &buf) {
     return sizeof(uint32_t) + buf.length;
 }
@@ -65,31 +70,37 @@ size_t GateKeeperMessage::GetSerializedSize() const {
     }
 }
 
-uint8_t *GateKeeperMessage::Serialize() const {
-    if (error != ERROR_NONE) {
-        uint32_t *error_buf = new uint32_t;
-        *error_buf = static_cast<uint32_t>(error);
-        return reinterpret_cast<uint8_t *>(error_buf);
-    } else {
-        uint8_t *buf = new uint8_t[2*sizeof(uint32_t) + nonErrorSerializedSize()];
-        uint32_t error_value = static_cast<uint32_t>(error);
-        memcpy(buf, &error_value, sizeof(uint32_t));
-        memcpy(buf + sizeof(uint32_t), &user_id, sizeof(user_id));
-        nonErrorSerialize(buf + 2*sizeof(uint32_t));
-        return buf;
+size_t GateKeeperMessage::Serialize(uint8_t *buffer, const uint8_t *end) const {
+    size_t bytes_written = 0;
+    if (buffer + GetSerializedSize() != end) {
+        return 0;
     }
+
+    serial_header_t *header = reinterpret_cast<serial_header_t *>(buffer);
+    if (error != ERROR_NONE) {
+        if (buffer + sizeof(error) > end) return 0;
+        header->error = error;
+        bytes_written += sizeof(error);
+    } else {
+        if (buffer + sizeof(serial_header_t) + nonErrorSerializedSize() > end)
+            return 0;
+        header->error = error;
+        header->user_id = user_id;
+        nonErrorSerialize(buffer + sizeof(*header));
+        bytes_written += sizeof(*header) + nonErrorSerializedSize();
+    }
+
+    return bytes_written;
 }
 
 gatekeeper_error_t GateKeeperMessage::Deserialize(const uint8_t *payload, const uint8_t *end) {
     uint32_t error_value;
     if (payload + sizeof(uint32_t) > end) return ERROR_INVALID;
-    memcpy(&error_value, payload, sizeof(uint32_t));
-    error = static_cast<gatekeeper_error_t>(error_value);
-    payload += sizeof(uint32_t);
-    if (error == ERROR_NONE) {
+    const serial_header_t *header = reinterpret_cast<const serial_header_t *>(payload);
+    if (header->error == ERROR_NONE) {
         if (payload == end) return ERROR_INVALID;
-        user_id = *((uint32_t *) payload);
-        error = nonErrorDeserialize(payload + sizeof(uint32_t), end);
+        user_id = header->user_id;
+        error = nonErrorDeserialize(payload + sizeof(*header), end);
     }
 
     return error;
