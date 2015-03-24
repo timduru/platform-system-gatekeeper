@@ -26,6 +26,9 @@
  */
 namespace gatekeeper {
 
+const uint32_t ENROLL = 0;
+const uint32_t VERIFY = 1;
+
 typedef enum {
     ERROR_NONE = 0,
     ERROR_INVALID = 1,
