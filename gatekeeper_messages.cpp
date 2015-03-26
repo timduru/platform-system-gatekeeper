@@ -26,7 +26,7 @@ namespace gatekeeper {
  * Methods for serializing/deserializing SizedBuffers
  */
 
-struct serial_header_t {
+struct __attribute__((__packed__)) serial_header_t {
     uint32_t error;
     uint32_t user_id;
 };
@@ -72,7 +72,7 @@ size_t GateKeeperMessage::GetSerializedSize() const {
 
 size_t GateKeeperMessage::Serialize(uint8_t *buffer, const uint8_t *end) const {
     size_t bytes_written = 0;
-    if (buffer + GetSerializedSize() != end) {
+    if (buffer + GetSerializedSize() > end) {
         return 0;
     }
 
@@ -101,6 +101,8 @@ gatekeeper_error_t GateKeeperMessage::Deserialize(const uint8_t *payload, const 
         if (payload == end) return ERROR_INVALID;
         user_id = header->user_id;
         error = nonErrorDeserialize(payload + sizeof(*header), end);
+    } else {
+        error = static_cast<gatekeeper_error_t>(header->error);
     }
 
     return error;
