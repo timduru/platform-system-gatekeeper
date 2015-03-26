@@ -19,22 +19,6 @@
 
 namespace gatekeeper {
 
-/**
- * Internal only structure for easy serialization
- * and deserialization of password handles.
- */
-static const uint8_t HANDLE_VERSION = 0;
-struct __attribute__ ((__packed__)) password_handle_t {
-    // fields included in signature
-    uint8_t version;
-    secure_id_t user_id;
-    secure_id_t authenticator_id;
-
-    // fields not included in signature
-    salt_t salt;
-    uint8_t signature[32];
-};
-
 void GateKeeper::Enroll(const EnrollRequest &request, EnrollResponse *response) {
     if (response == NULL) return;
 

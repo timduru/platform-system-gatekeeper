@@ -15,8 +15,11 @@
  */
 #include <gtest/gtest.h>
 #include <hardware/gatekeeper.h>
+#include <gatekeeper/gatekeeper.h> // For password_handle_t
 
 using ::testing::Test;
+using ::gatekeeper::password_handle_t;
+using ::gatekeeper::secure_id_t;
 
 class GateKeeperDeviceTest : public virtual Test {
 public:
@@ -88,4 +91,53 @@ TEST_F(GateKeeperDeviceTest, EnrollAndVerifyBadPassword) {
     ASSERT_NE(0, ret);
     ASSERT_EQ(NULL, auth_token);
 }
+
+TEST_F(GateKeeperDeviceTest, UntrustedReEnroll) {
+    size_t password_len = 50;
+    uint8_t password_payload[password_len];
+    uint8_t *password_handle;
+    size_t password_handle_length;
+    int ret;
+
+    ret = device->enroll(device, 0, NULL, 0, NULL, 0, password_payload, password_len,
+             &password_handle, &password_handle_length);
+
+    ASSERT_EQ(0, ret);
+
+    password_handle_t *handle = reinterpret_cast<password_handle_t *>(password_handle);
+    secure_id_t sid = handle->user_id;
+
+    ret = device->enroll(device, 0, NULL, 0, NULL, 0, password_payload, password_len,
+            &password_handle, &password_handle_length);
+
+    ASSERT_EQ(0, ret);
+    handle = reinterpret_cast<password_handle_t *>(password_handle);
+    ASSERT_NE(sid, handle->user_id);
+}
+
+
+TEST_F(GateKeeperDeviceTest, TrustedReEnroll) {
+    size_t password_len = 50;
+    uint8_t password_payload[password_len];
+    uint8_t *password_handle;
+    size_t password_handle_length;
+    int ret;
+
+    ret = device->enroll(device, 0, NULL, 0, NULL, 0, password_payload, password_len,
+             &password_handle, &password_handle_length);
+
+    ASSERT_EQ(0, ret);
+
+    password_handle_t *handle = reinterpret_cast<password_handle_t *>(password_handle);
+    secure_id_t sid = handle->user_id;
+
+    ret = device->enroll(device, 0, password_handle, password_handle_length, password_payload,
+            password_len, password_payload, password_len, &password_handle, &password_handle_length);
+
+    ASSERT_EQ(0, ret);
+    handle = reinterpret_cast<password_handle_t *>(password_handle);
+    ASSERT_EQ(sid, handle->user_id);
+}
+
+
 

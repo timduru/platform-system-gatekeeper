@@ -33,6 +33,8 @@ typedef uint64_t salt_t;
  * and keymaster to determine CryptoObject availability.
  *
  * All fields are written in network order.
+ *
+ * TODO: use hw_auth_token_t when Trusty has it
  */
 const uint8_t AUTH_TOKEN_VERSION = 0;
 struct __attribute__ ((__packed__)) AuthToken {
@@ -44,7 +46,23 @@ struct __attribute__ ((__packed__)) AuthToken {
     uint8_t hmac[32];
 };
 
-struct password_handle_t;
+/**
+ * Internal only structure for easy serialization
+ * and deserialization of password handles.
+ *
+ * Visible for testing.
+ */
+static const uint8_t HANDLE_VERSION = 0;
+struct __attribute__ ((__packed__)) password_handle_t {
+    // fields included in signature
+    uint8_t version;
+    secure_id_t user_id;
+    secure_id_t authenticator_id;
+
+    // fields not included in signature
+    salt_t salt;
+    uint8_t signature[32];
+};
 
 /**
  * Base class for gatekeeper implementations. Provides all functionality except
