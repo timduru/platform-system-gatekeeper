@@ -115,7 +115,7 @@ void GateKeeper::Verify(const VerifyRequest &request, VerifyResponse *response) 
 
 bool GateKeeper::CreatePasswordHandle(SizedBuffer *password_handle_buffer, salt_t salt,
         secure_id_t user_id, secure_id_t authenticator_id, const uint8_t *password,
-        size_t password_length) {
+        uint32_t password_length) {
     password_handle_buffer->buffer.reset(new uint8_t[sizeof(password_handle_t)]);
     password_handle_buffer->length = sizeof(password_handle_t);
 
@@ -126,14 +126,14 @@ bool GateKeeper::CreatePasswordHandle(SizedBuffer *password_handle_buffer, salt_
     password_handle->user_id = user_id;
     password_handle->authenticator_id = authenticator_id;
 
-    size_t metadata_length = sizeof(user_id) /* user id */
+    uint32_t metadata_length = sizeof(user_id) /* user id */
         + sizeof(authenticator_id) /* auth id */ + sizeof(uint8_t) /* version */;
     uint8_t to_sign[password_length + metadata_length];
     memcpy(to_sign, &password_handle->version, metadata_length);
     memcpy(to_sign + metadata_length, password, password_length);
 
     const uint8_t *password_key = NULL;
-    size_t password_key_length = 0;
+    uint32_t password_key_length = 0;
     GetPasswordKey(&password_key, &password_key_length);
 
     if (!password_key || password_key_length == 0) {
@@ -169,7 +169,7 @@ bool GateKeeper::ValidatePasswordFile(uint32_t uid, const SizedBuffer &provided_
             == 0;
 }
 
-void GateKeeper::MintAuthToken(UniquePtr<uint8_t> *auth_token, size_t *length,
+void GateKeeper::MintAuthToken(UniquePtr<uint8_t> *auth_token, uint32_t *length,
         uint32_t timestamp, secure_id_t user_id, secure_id_t authenticator_id) {
     if (auth_token == NULL) return;
 
@@ -183,10 +183,10 @@ void GateKeeper::MintAuthToken(UniquePtr<uint8_t> *auth_token, size_t *length,
     token->timestamp = timestamp;
 
     const uint8_t *auth_token_key = NULL;
-    size_t key_len = 0;
+    uint32_t key_len = 0;
     GetAuthTokenKey(&auth_token_key, &key_len);
 
-    size_t hash_len = (size_t)((uint8_t *)&token->hmac - (uint8_t *)token);
+    uint32_t hash_len = (uint32_t)((uint8_t *)&token->hmac - (uint8_t *)token);
     ComputeSignature(token->hmac, sizeof(token->hmac), auth_token_key, key_len,
             reinterpret_cast<uint8_t *>(token), hash_len);
 

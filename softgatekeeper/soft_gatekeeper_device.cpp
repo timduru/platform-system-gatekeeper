@@ -92,10 +92,10 @@ int SoftGateKeeperDevice::close_device(hw_device_t* dev) {
 }
 
 int SoftGateKeeperDevice::Enroll(const struct gatekeeper_device *dev, uint32_t uid,
-            const uint8_t *current_password_handle, size_t current_password_handle_length,
-            const uint8_t *current_password, size_t current_password_length,
-            const uint8_t *desired_password, size_t desired_password_length,
-            uint8_t **enrolled_password_handle, size_t *enrolled_password_handle_length) {
+            const uint8_t *current_password_handle, uint32_t current_password_handle_length,
+            const uint8_t *current_password, uint32_t current_password_length,
+            const uint8_t *desired_password, uint32_t desired_password_length,
+            uint8_t **enrolled_password_handle, uint32_t *enrolled_password_handle_length) {
 
     if (dev == NULL ||
             enrolled_password_handle == NULL || enrolled_password_handle_length == NULL ||
@@ -140,9 +140,9 @@ int SoftGateKeeperDevice::Enroll(const struct gatekeeper_device *dev, uint32_t u
 }
 
 int SoftGateKeeperDevice::Verify(const struct gatekeeper_device *dev, uint32_t uid,
-        const uint8_t *enrolled_password_handle, size_t enrolled_password_handle_length,
-        const uint8_t *provided_password, size_t provided_password_length,
-        uint8_t **auth_token, size_t *auth_token_length) {
+        const uint8_t *enrolled_password_handle, uint32_t enrolled_password_handle_length,
+        const uint8_t *provided_password, uint32_t provided_password_length,
+        uint8_t **auth_token, uint32_t *auth_token_length) {
 
     if (dev == NULL || enrolled_password_handle == NULL ||
             provided_password == NULL) {

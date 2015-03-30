@@ -23,11 +23,11 @@ namespace gatekeeper {
 
 class NativeGateKeeperFileIo : public ::gatekeeper::GateKeeperFileIo {
 public:
-    virtual void Write(const char *filename, const uint8_t *bytes, size_t length) {
+    virtual void Write(const char *filename, const uint8_t *bytes, uint32_t length) {
         // TODO
     }
 
-    virtual size_t Read(const char *filename, UniquePtr<uint8_t> *bytes) const {
+    virtual uint32_t Read(const char *filename, UniquePtr<uint8_t> *bytes) const {
         // TODO
         return 0;
     }

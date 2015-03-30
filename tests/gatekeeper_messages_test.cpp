@@ -32,13 +32,13 @@ using std::endl;
 
 static const uint32_t USER_ID = 3857;
 
-static SizedBuffer *make_buffer(size_t size) {
+static SizedBuffer *make_buffer(uint32_t size) {
     SizedBuffer *result = new SizedBuffer;
     result->length = size;
     uint8_t *buffer = new uint8_t[size];
     srand(size);
 
-    for (size_t i = 0; i < size; i++) {
+    for (uint32_t i = 0; i < size; i++) {
         buffer[i] = rand();
     }
 
@@ -47,7 +47,7 @@ static SizedBuffer *make_buffer(size_t size) {
 }
 
 TEST(RoundTripTest, EnrollRequestNullEnrolledNullHandle) {
-    const size_t password_size = 512;
+    const uint32_t password_size = 512;
     SizedBuffer *provided_password = make_buffer(password_size);
     const SizedBuffer *deserialized_password;
     // create request, serialize, deserialize, and validate
@@ -66,15 +66,15 @@ TEST(RoundTripTest, EnrollRequestNullEnrolledNullHandle) {
     ASSERT_EQ(USER_ID, deserialized_msg.user_id);
     ASSERT_EQ((uint32_t) password_size, deserialized_password->length);
     ASSERT_EQ(0, memcmp(msg.provided_password.buffer.get(), deserialized_password->buffer.get(), password_size));
-    ASSERT_EQ((size_t) 0, deserialized_msg.enrolled_password.length);
+    ASSERT_EQ((uint32_t) 0, deserialized_msg.enrolled_password.length);
     ASSERT_EQ(NULL, deserialized_msg.enrolled_password.buffer.get());
-    ASSERT_EQ((size_t) 0, deserialized_msg.password_handle.length);
+    ASSERT_EQ((uint32_t) 0, deserialized_msg.password_handle.length);
     ASSERT_EQ(NULL, deserialized_msg.password_handle.buffer.get());
     delete provided_password;
 }
 
 TEST(RoundTripTest, EnrollRequestEmptyEnrolledEmptyHandle) {
-    const size_t password_size = 512;
+    const uint32_t password_size = 512;
     SizedBuffer *provided_password = make_buffer(password_size);
     SizedBuffer enrolled;
     SizedBuffer handle;
@@ -95,15 +95,15 @@ TEST(RoundTripTest, EnrollRequestEmptyEnrolledEmptyHandle) {
     ASSERT_EQ(USER_ID, deserialized_msg.user_id);
     ASSERT_EQ((uint32_t) password_size, deserialized_password->length);
     ASSERT_EQ(0, memcmp(msg.provided_password.buffer.get(), deserialized_password->buffer.get(), password_size));
-    ASSERT_EQ((size_t) 0, deserialized_msg.enrolled_password.length);
+    ASSERT_EQ((uint32_t) 0, deserialized_msg.enrolled_password.length);
     ASSERT_EQ(NULL, deserialized_msg.enrolled_password.buffer.get());
-    ASSERT_EQ((size_t) 0, deserialized_msg.password_handle.length);
+    ASSERT_EQ((uint32_t) 0, deserialized_msg.password_handle.length);
     ASSERT_EQ(NULL, deserialized_msg.password_handle.buffer.get());
     delete provided_password;
 }
 
 TEST(RoundTripTest, EnrollRequestNonNullEnrolledOrHandle) {
-    const size_t password_size = 512;
+    const uint32_t password_size = 512;
     SizedBuffer *provided_password = make_buffer(password_size);
     SizedBuffer *enrolled_password = make_buffer(password_size);
     SizedBuffer *password_handle = make_buffer(password_size);
@@ -139,7 +139,7 @@ TEST(RoundTripTest, EnrollRequestNonNullEnrolledOrHandle) {
 
 
 TEST(RoundTripTest, EnrollResponse) {
-    const size_t password_size = 512;
+    const uint32_t password_size = 512;
     SizedBuffer *enrolled_password = make_buffer(password_size);
     const SizedBuffer *deserialized_password;
     // create request, serialize, deserialize, and validate
@@ -162,7 +162,7 @@ TEST(RoundTripTest, EnrollResponse) {
 }
 
 TEST(RoundTripTest, VerifyRequest) {
-    const size_t password_size = 512;
+    const uint32_t password_size = 512;
     SizedBuffer *provided_password = make_buffer(password_size),
           *password_handle = make_buffer(password_size);
     const SizedBuffer *deserialized_password;
@@ -191,7 +191,7 @@ TEST(RoundTripTest, VerifyRequest) {
 }
 
 TEST(RoundTripTest, VerifyResponse) {
-    const size_t password_size = 512;
+    const uint32_t password_size = 512;
     SizedBuffer *auth_token = make_buffer(password_size);
     const SizedBuffer *deserialized_password;
     // create request, serialize, deserialize, and validate
@@ -293,9 +293,9 @@ uint8_t msgbuf[] = {
 
 template <typename Message> void parse_garbage() {
     Message msg;
-    size_t array_length = sizeof(msgbuf) / sizeof(msgbuf[0]);
+    uint32_t array_length = sizeof(msgbuf) / sizeof(msgbuf[0]);
     const uint8_t* end = msgbuf + array_length;
-    for (size_t i = 0; i < array_length; ++i) {
+    for (uint32_t i = 0; i < array_length; ++i) {
         const uint8_t* begin = msgbuf + i;
         const uint8_t* p = begin;
         msg.Deserialize(p, end);

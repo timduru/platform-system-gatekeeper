@@ -35,13 +35,13 @@ namespace gatekeeper {
 class GateKeeperFileIo {
 public:
     virtual ~GateKeeperFileIo() {}
-    virtual void Write(const char *filename, const uint8_t *bytes, size_t length) = 0;
-    virtual size_t Read(const char *filename, UniquePtr<uint8_t> *bytes) const = 0;
+    virtual void Write(const char *filename, const uint8_t *bytes, uint32_t length) = 0;
+    virtual uint32_t Read(const char *filename, UniquePtr<uint8_t> *bytes) const = 0;
 };
 
 class SoftGateKeeper : public GateKeeper {
 public:
-    static const size_t SIGNATURE_LENGTH_BYTES = 32;
+    static const uint32_t SIGNATURE_LENGTH_BYTES = 32;
 
     // scrypt params
     static const uint64_t N = 16384;
@@ -61,33 +61,33 @@ public:
     }
 
     virtual void GetAuthTokenKey(const uint8_t **auth_token_key,
-            size_t *length) const {
+            uint32_t *length) const {
         if (auth_token_key == NULL || length == NULL) return;
         *auth_token_key = const_cast<const uint8_t *>(key_.get());
         *length = SIGNATURE_LENGTH_BYTES;
     }
 
-    virtual void GetPasswordKey(const uint8_t **password_key, size_t *length) {
+    virtual void GetPasswordKey(const uint8_t **password_key, uint32_t *length) {
         if (password_key == NULL || length == NULL) return;
         *password_key = const_cast<const uint8_t *>(key_.get());
         *length = SIGNATURE_LENGTH_BYTES;
     }
 
-    virtual void ComputePasswordSignature(uint8_t *signature, size_t signature_length,
-            const uint8_t *, size_t, const uint8_t *password,
-            size_t password_length, salt_t salt) const {
+    virtual void ComputePasswordSignature(uint8_t *signature, uint32_t signature_length,
+            const uint8_t *, uint32_t, const uint8_t *password,
+            uint32_t password_length, salt_t salt) const {
         if (signature == NULL) return;
         crypto_scrypt(password, password_length, reinterpret_cast<uint8_t *>(&salt),
                 sizeof(salt), N, r, p, signature, signature_length);
     }
 
-    virtual void GetRandom(void *random, size_t requested_length) const {
+    virtual void GetRandom(void *random, uint32_t requested_length) const {
         if (random == NULL) return;
         RAND_pseudo_bytes((uint8_t *) random, requested_length);
     }
 
-    virtual void ComputeSignature(uint8_t *signature, size_t signature_length,
-            const uint8_t *, size_t, const uint8_t *, const size_t) const {
+    virtual void ComputeSignature(uint8_t *signature, uint32_t signature_length,
+            const uint8_t *, uint32_t, const uint8_t *, const uint32_t) const {
         if (signature == NULL) return;
         memset(signature, 0, signature_length);
     }
@@ -96,7 +96,7 @@ public:
         char buf[MAX_UINT_32_CHARS];
         sprintf(buf, "%u", uid);
         UniquePtr<uint8_t> password_buffer;
-        size_t length = file_io_->Read(buf, &password_buffer);
+        uint32_t length = file_io_->Read(buf, &password_buffer);
         password_file->buffer.reset(password_buffer.release());
         password_file->length = length;
     }

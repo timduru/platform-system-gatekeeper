@@ -91,7 +91,7 @@ protected:
      * Ownership of the auth_token_key pointer is maintained by the implementor.
      *
      */
-    virtual void GetAuthTokenKey(const uint8_t **auth_token_key, size_t *length)
+    virtual void GetAuthTokenKey(const uint8_t **auth_token_key, uint32_t *length)
         const = 0;
     /**
      * The key used to sign and verify password data.
@@ -104,7 +104,7 @@ protected:
      * Ownership of the password_key pointer is maintained by the implementor.
      *
      */
-    virtual void GetPasswordKey(const uint8_t **password_key, size_t *length) = 0;
+    virtual void GetPasswordKey(const uint8_t **password_key, uint32_t *length) = 0;
 
     /**
      * Uses platform-specific routines to compute a signature on the provided password.
@@ -115,9 +115,9 @@ protected:
      *
      * Writes the signature_length size signature to the 'signature' pointer.
      */
-    virtual void ComputePasswordSignature(uint8_t *signature, size_t signature_length,
-            const uint8_t *key, size_t key_length, const uint8_t *password,
-            size_t password_length, salt_t salt) const = 0;
+    virtual void ComputePasswordSignature(uint8_t *signature, uint32_t signature_length,
+            const uint8_t *key, uint32_t key_length, const uint8_t *password,
+            uint32_t password_length, salt_t salt) const = 0;
 
     /**
      * Retrieves a unique, cryptographically randomly generated buffer for use in password
@@ -125,16 +125,16 @@ protected:
      *
      * Assings the random to the random UniquePtr, relinquishing ownership to the caller
      */
-    virtual void GetRandom(void *random, size_t requested_size) const = 0;
+    virtual void GetRandom(void *random, uint32_t requested_size) const = 0;
 
     /**
      * Uses platform-specific routines to compute a signature on the provided message.
      *
      * Writes the signature_length size signature to the 'signature' pointer.
      */
-    virtual void ComputeSignature(uint8_t *signature, size_t signature_length,
-            const uint8_t *key, size_t key_length, const uint8_t *message,
-            const size_t length) const = 0;
+    virtual void ComputeSignature(uint8_t *signature, uint32_t signature_length,
+            const uint8_t *key, uint32_t key_length, const uint8_t *message,
+            const uint32_t length) const = 0;
 
     /**
      * Write the password file to persistent storage.
@@ -160,7 +160,7 @@ private:
      * The format is consistent with that of AuthToken above.
      * Also returns the length in length if it is not null.
      */
-    void MintAuthToken(UniquePtr<uint8_t> *auth_token, size_t *length, uint32_t timestamp,
+    void MintAuthToken(UniquePtr<uint8_t> *auth_token, uint32_t *length, uint32_t timestamp,
             secure_id_t user_id, secure_id_t authenticator_id);
 
     /**
@@ -179,7 +179,7 @@ private:
      */
     bool CreatePasswordHandle(SizedBuffer *password_handle, salt_t salt,
         secure_id_t secure_id, secure_id_t authenticator_id, const uint8_t *password,
-        size_t password_length);
+        uint32_t password_length);
 };
 
 }

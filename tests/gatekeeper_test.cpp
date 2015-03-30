@@ -36,13 +36,13 @@ public:
         bytes_.length = 0;
     }
 
-    virtual void Write(const char *filename, const uint8_t *bytes, size_t length) {
+    virtual void Write(const char *filename, const uint8_t *bytes, uint32_t length) {
         bytes_.buffer.reset(new uint8_t[length]);
         memcpy(bytes_.buffer.get(), bytes, length);
         bytes_.length = length;
     }
 
-    virtual size_t Read(const char *filename, UniquePtr<uint8_t> *bytes) const {
+    virtual uint32_t Read(const char *filename, UniquePtr<uint8_t> *bytes) const {
         if (!bytes_.buffer.get() || bytes_.length == 0) {
             bytes->reset();
         } else {

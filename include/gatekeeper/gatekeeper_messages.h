@@ -43,7 +43,7 @@ struct SizedBuffer {
      * Constructs a SizedBuffer of a provided
      * length.
      */
-    SizedBuffer(size_t length) {
+    SizedBuffer(uint32_t length) {
         if (length != 0) {
             buffer.reset(new uint8_t[length]);
         } else {
@@ -57,13 +57,13 @@ struct SizedBuffer {
      * Takes ownership of the buf pointer, and deallocates it
      * when destructed.
      */
-    SizedBuffer(uint8_t *buf, size_t len) {
+    SizedBuffer(uint8_t *buf, uint32_t len) {
         buffer.reset(buf);
         length = len;
     }
 
     UniquePtr<uint8_t> buffer;
-    size_t length;
+    uint32_t length;
 };
 
 /*
@@ -80,7 +80,7 @@ struct GateKeeperMessage {
      * Returns serialized size in bytes of the current state of the
      * object.
      */
-    size_t GetSerializedSize() const;
+    uint32_t GetSerializedSize() const;
     /**
      * Converts the object into its serialized representation.
      *
@@ -88,7 +88,7 @@ struct GateKeeperMessage {
      *
      * Returns the number of bytes written or 0 on error.
      */
-    size_t Serialize(uint8_t *payload, const uint8_t *end) const;
+    uint32_t Serialize(uint8_t *payload, const uint8_t *end) const;
 
     /**
      * Inflates the object from its serial representation.
@@ -105,7 +105,7 @@ struct GateKeeperMessage {
      * Returns the size of serializing only the elements specific to the
      * current sublclass.
      */
-    virtual size_t nonErrorSerializedSize() const { return 0; } ;
+    virtual uint32_t nonErrorSerializedSize() const { return 0; } ;
     /**
      * Takes a pointer to a buffer prepared by Serialize and writes
      * the subclass specific data into it. The size of the buffer must be exactly
@@ -132,7 +132,7 @@ struct VerifyRequest : public GateKeeperMessage {
     VerifyRequest();
     ~VerifyRequest();
 
-    virtual size_t nonErrorSerializedSize() const;
+    virtual uint32_t nonErrorSerializedSize() const;
     virtual void nonErrorSerialize(uint8_t *buffer) const;
     virtual gatekeeper_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
 
@@ -147,7 +147,7 @@ struct VerifyResponse : public GateKeeperMessage {
 
     void SetVerificationToken(SizedBuffer *auth_token);
 
-    virtual size_t nonErrorSerializedSize() const;
+    virtual uint32_t nonErrorSerializedSize() const;
     virtual void nonErrorSerialize(uint8_t *buffer) const;
     virtual gatekeeper_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
 
@@ -160,7 +160,7 @@ struct EnrollRequest : public GateKeeperMessage {
     EnrollRequest();
     ~EnrollRequest();
 
-    virtual size_t nonErrorSerializedSize() const;
+    virtual uint32_t nonErrorSerializedSize() const;
     virtual void nonErrorSerialize(uint8_t *buffer) const;
     virtual gatekeeper_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
 
@@ -187,7 +187,7 @@ public:
 
     void SetEnrolledPasswordHandle(SizedBuffer *enrolled_password_handle);
 
-    virtual size_t nonErrorSerializedSize() const;
+    virtual uint32_t nonErrorSerializedSize() const;
     virtual void nonErrorSerialize(uint8_t *buffer) const;
     virtual gatekeeper_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
 

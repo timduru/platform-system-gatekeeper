@@ -19,6 +19,7 @@
 
 #include <string.h>
 
+using namespace std;
 
 namespace gatekeeper {
 
@@ -31,8 +32,8 @@ struct __attribute__((__packed__)) serial_header_t {
     uint32_t user_id;
 };
 
-static inline size_t serialized_buffer_size(const SizedBuffer &buf) {
-    return sizeof(uint32_t) + buf.length;
+static inline uint32_t serialized_buffer_size(const SizedBuffer &buf) {
+    return sizeof(buf.length) + buf.length;
 }
 
 static inline void append_to_buffer(uint8_t **buffer, const SizedBuffer *to_append) {
@@ -62,7 +63,7 @@ static inline gatekeeper_error_t read_from_buffer(const uint8_t **buffer, const 
 }
 
 
-size_t GateKeeperMessage::GetSerializedSize() const {
+uint32_t GateKeeperMessage::GetSerializedSize() const {
     if (error == ERROR_NONE) {
         return 2 * sizeof(uint32_t) + nonErrorSerializedSize();
     } else {
@@ -70,8 +71,8 @@ size_t GateKeeperMessage::GetSerializedSize() const {
     }
 }
 
-size_t GateKeeperMessage::Serialize(uint8_t *buffer, const uint8_t *end) const {
-    size_t bytes_written = 0;
+uint32_t GateKeeperMessage::Serialize(uint8_t *buffer, const uint8_t *end) const {
+    uint32_t bytes_written = 0;
     if (buffer + GetSerializedSize() > end) {
         return 0;
     }
@@ -134,7 +135,7 @@ VerifyRequest::~VerifyRequest() {
     }
 }
 
-size_t VerifyRequest::nonErrorSerializedSize() const {
+uint32_t VerifyRequest::nonErrorSerializedSize() const {
     return serialized_buffer_size(password_handle) + serialized_buffer_size(provided_password);
 }
 
@@ -183,7 +184,7 @@ void VerifyResponse::SetVerificationToken(SizedBuffer *auth_token) {
     this->auth_token.length = auth_token->length;
 }
 
-size_t VerifyResponse::nonErrorSerializedSize() const {
+uint32_t VerifyResponse::nonErrorSerializedSize() const {
     return serialized_buffer_size(auth_token);
 }
 
@@ -245,7 +246,7 @@ EnrollRequest::~EnrollRequest() {
     }
 }
 
-size_t EnrollRequest::nonErrorSerializedSize() const {
+uint32_t EnrollRequest::nonErrorSerializedSize() const {
    return serialized_buffer_size(provided_password) + serialized_buffer_size(enrolled_password)
        + serialized_buffer_size(password_handle);
 }
@@ -307,7 +308,7 @@ void EnrollResponse::SetEnrolledPasswordHandle(SizedBuffer *enrolled_password_ha
     this->enrolled_password_handle.length = enrolled_password_handle->length;
 }
 
-size_t EnrollResponse::nonErrorSerializedSize() const {
+uint32_t EnrollResponse::nonErrorSerializedSize() const {
     return serialized_buffer_size(enrolled_password_handle);
 }
 
