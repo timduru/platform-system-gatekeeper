@@ -15,7 +15,6 @@
  */
 
 #include "soft_gatekeeper_device.h"
-#include "native_gatekeeper_file_io.h"
 
 __attribute__((visibility("default")))
 int softgatekeeper_device_open(const hw_module_t *module, const char *name, hw_device_t **device) {
@@ -29,7 +28,6 @@ int softgatekeeper_device_open(const hw_module_t *module, const char *name, hw_d
     *device = reinterpret_cast<hw_device_t *>(dev);
     return 0;
 }
-
 
 static struct hw_module_methods_t gatekeeper_module_methods  = {
     .open = softgatekeeper_device_open,
@@ -54,7 +52,7 @@ struct gatekeeper_module soft_gatekeeper_device_module = {
 namespace gatekeeper {
 
 SoftGateKeeperDevice::SoftGateKeeperDevice(const hw_module_t *module)
-    : impl_(new SoftGateKeeper(new NativeGateKeeperFileIo())) {
+    : impl_(new SoftGateKeeper()) {
 #if __cplusplus >= 201103L || defined(__GXX_EXPERIMENTAL_CXX0X__)
     static_assert(std::is_standard_layout<SoftGateKeeperDevice>::value,
                   "SoftGateKeeperDevice must be standard layout");

@@ -30,32 +30,6 @@ using ::gatekeeper::SoftGateKeeper;
 using ::gatekeeper::AuthToken;
 using ::gatekeeper::secure_id_t;
 
-class TestGateKeeperFileIo : public ::gatekeeper::GateKeeperFileIo {
-public:
-    TestGateKeeperFileIo() {
-        bytes_.length = 0;
-    }
-
-    virtual void Write(const char *filename, const uint8_t *bytes, uint32_t length) {
-        bytes_.buffer.reset(new uint8_t[length]);
-        memcpy(bytes_.buffer.get(), bytes, length);
-        bytes_.length = length;
-    }
-
-    virtual uint32_t Read(const char *filename, UniquePtr<uint8_t> *bytes) const {
-        if (!bytes_.buffer.get() || bytes_.length == 0) {
-            bytes->reset();
-        } else {
-            bytes->reset(new uint8_t[bytes_.length]);
-            memcpy(bytes->get(), bytes_.buffer.get(), bytes_.length);
-        }
-
-        return bytes_.length;
-    }
-
-    SizedBuffer bytes_;
-};
-
 static void do_enroll(SoftGateKeeper &gatekeeper, EnrollResponse *response) {
     SizedBuffer password;
 
@@ -68,14 +42,14 @@ static void do_enroll(SoftGateKeeper &gatekeeper, EnrollResponse *response) {
 }
 
 TEST(GateKeeperTest, EnrollSuccess) {
-    SoftGateKeeper gatekeeper(new TestGateKeeperFileIo());
+    SoftGateKeeper gatekeeper;
     EnrollResponse response;
     do_enroll(gatekeeper, &response);
     ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, response.error);
 }
 
 TEST(GateKeeperTest, EnrollBogusData) {
-    SoftGateKeeper gatekeeper(new TestGateKeeperFileIo());
+    SoftGateKeeper gatekeeper;
     SizedBuffer password;
     EnrollResponse response;
 
@@ -87,7 +61,7 @@ TEST(GateKeeperTest, EnrollBogusData) {
 }
 
 TEST(GateKeeperTest, VerifySuccess) {
-    SoftGateKeeper gatekeeper(new TestGateKeeperFileIo());
+    SoftGateKeeper gatekeeper;
     SizedBuffer provided_password;
     EnrollResponse enroll_response;
 
@@ -114,36 +88,8 @@ TEST(GateKeeperTest, VerifySuccess) {
     ASSERT_NE((uint64_t) 0, auth_token->auxiliary_secure_user_id);
 }
 
-TEST(GateKeeperTest, VerifyBadPwFile) {
-    TestGateKeeperFileIo *fw = new TestGateKeeperFileIo();
-    SoftGateKeeper gatekeeper(fw);
-    SizedBuffer provided_password;
-    EnrollResponse enroll_response;
-
-    provided_password.buffer.reset(new uint8_t[16]);
-    provided_password.length = 16;
-    memset(provided_password.buffer.get(), 0, 16);
-    do_enroll(gatekeeper, &enroll_response);
-    ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, enroll_response.error);
-
-    VerifyRequest request(0, &enroll_response.enrolled_password_handle,
-            &provided_password);
-    VerifyResponse response;
-    fw->bytes_.buffer.reset();
-    gatekeeper.Verify(request, &response);
-    ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, response.error);
-
-    AuthToken *auth_token =
-        reinterpret_cast<AuthToken *>(response.auth_token.buffer.get());
-
-    ASSERT_EQ((uint32_t) 0, auth_token->authenticator_id);
-    ASSERT_NE(~((uint32_t) 0), auth_token->timestamp);
-    ASSERT_EQ((uint64_t) 0, auth_token->root_secure_user_id);
-    ASSERT_EQ((uint64_t) 0, auth_token->auxiliary_secure_user_id);
-}
-
 TEST(GateKeeperTest, TrustedReEnroll) {
-    SoftGateKeeper gatekeeper(new TestGateKeeperFileIo());
+    SoftGateKeeper gatekeeper;
     SizedBuffer provided_password;
     EnrollResponse enroll_response;
     SizedBuffer password_handle;
@@ -198,7 +144,7 @@ TEST(GateKeeperTest, TrustedReEnroll) {
 
 
 TEST(GateKeeperTest, UntrustedReEnroll) {
-    SoftGateKeeper gatekeeper(new TestGateKeeperFileIo());
+    SoftGateKeeper gatekeeper;
     SizedBuffer provided_password;
     EnrollResponse enroll_response;
 
@@ -243,7 +189,7 @@ TEST(GateKeeperTest, UntrustedReEnroll) {
 
 
 TEST(GateKeeperTest, VerifyBogusData) {
-    SoftGateKeeper gatekeeper(new TestGateKeeperFileIo());
+    SoftGateKeeper gatekeeper;
     SizedBuffer provided_password;
     SizedBuffer password_handle;
     VerifyResponse response;

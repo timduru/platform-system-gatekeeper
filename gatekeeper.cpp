@@ -33,21 +33,15 @@ void GateKeeper::Enroll(const EnrollRequest &request, EnrollResponse *response) 
         // Password handle does not match what is stored, generate new SecureID
         GetRandom(&user_id, sizeof(secure_id_t));
     } else {
-        if (!ValidatePasswordFile(request.user_id, request.password_handle)) {
-           response->error = ERROR_INVALID;
-           return;
-        } else {
-            // Password handle matches password file
-            password_handle_t *pw_handle =
-                reinterpret_cast<password_handle_t *>(request.password_handle.buffer.get());
-            if (!DoVerify(pw_handle, request.enrolled_password)) {
-                // incorrect old password
-                response->error = ERROR_INVALID;
-                return;
-            }
-
-            user_id = pw_handle->user_id;
+        password_handle_t *pw_handle =
+            reinterpret_cast<password_handle_t *>(request.password_handle.buffer.get());
+        if (!DoVerify(pw_handle, request.enrolled_password)) {
+            // incorrect old password
+            response->error = ERROR_INVALID;
+            return;
         }
+
+        user_id = pw_handle->user_id;
     }
 
     salt_t salt;
@@ -65,9 +59,6 @@ void GateKeeper::Enroll(const EnrollRequest &request, EnrollResponse *response) 
         return;
     }
 
-
-    WritePasswordFile(request.user_id, password_handle);
-
     response->SetEnrolledPasswordHandle(&password_handle);
 }
 
@@ -79,7 +70,6 @@ void GateKeeper::Verify(const VerifyRequest &request, VerifyResponse *response) 
         return;
     }
 
-    secure_id_t user_id, authenticator_id;
     password_handle_t *password_handle = reinterpret_cast<password_handle_t *>(
             request.password_handle.buffer.get());
 
@@ -89,16 +79,8 @@ void GateKeeper::Verify(const VerifyRequest &request, VerifyResponse *response) 
         return;
     }
 
-    if (!ValidatePasswordFile(request.user_id, request.password_handle)) {
-        // we don't allow access to keys if we can't validate the file.
-        // we must allow this case to support authentication before we decrypt
-        // /data, however.
-        user_id = 0;
-        authenticator_id = 0;
-    } else {
-        user_id = password_handle->user_id;
-        authenticator_id = password_handle->authenticator_id;
-    }
+    secure_id_t user_id = password_handle->user_id;
+    secure_id_t authenticator_id = password_handle->authenticator_id;
 
     uint64_t timestamp = GetNanosecondsSinceBoot();
 
@@ -155,18 +137,6 @@ bool GateKeeper::DoVerify(const password_handle_t *expected_handle, const SizedB
     }
 
     return memcmp_s(provided_handle.buffer.get(), expected_handle, sizeof(*expected_handle)) == 0;
-}
-
-bool GateKeeper::ValidatePasswordFile(uint32_t uid, const SizedBuffer &provided_handle) {
-    SizedBuffer stored_handle;
-    ReadPasswordFile(uid, &stored_handle);
-
-    if (!stored_handle.buffer.get() || stored_handle.length == 0) return false;
-
-    // do we also verify the signature here?
-    return stored_handle.length == provided_handle.length &&
-        memcmp_s(stored_handle.buffer.get(), provided_handle.buffer.get(), stored_handle.length)
-            == 0;
 }
 
 void GateKeeper::MintAuthToken(UniquePtr<uint8_t> *auth_token, uint32_t *length,

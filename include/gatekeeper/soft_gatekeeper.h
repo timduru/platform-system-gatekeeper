@@ -29,15 +29,6 @@ extern "C" {
 
 namespace gatekeeper {
 
-/**
- * Convenience class for easily switching out a testing implementation
- */
-class GateKeeperFileIo {
-public:
-    virtual ~GateKeeperFileIo() {}
-    virtual void Write(const char *filename, const uint8_t *bytes, uint32_t length) = 0;
-    virtual uint32_t Read(const char *filename, UniquePtr<uint8_t> *bytes) const = 0;
-};
 
 class SoftGateKeeper : public GateKeeper {
 public:
@@ -50,14 +41,12 @@ public:
 
     static const int MAX_UINT_32_CHARS = 11;
 
-    SoftGateKeeper(GateKeeperFileIo *file_io) {
-        file_io_ = file_io;
+    SoftGateKeeper() {
         key_.reset(new uint8_t[SIGNATURE_LENGTH_BYTES]);
         memset(key_.get(), 0, SIGNATURE_LENGTH_BYTES);
     }
 
     virtual ~SoftGateKeeper() {
-        delete file_io_;
     }
 
     virtual void GetAuthTokenKey(const uint8_t **auth_token_key,
@@ -92,21 +81,6 @@ public:
         memset(signature, 0, signature_length);
     }
 
-    virtual void ReadPasswordFile(uint32_t uid, SizedBuffer *password_file) const {
-        char buf[MAX_UINT_32_CHARS];
-        sprintf(buf, "%u", uid);
-        UniquePtr<uint8_t> password_buffer;
-        uint32_t length = file_io_->Read(buf, &password_buffer);
-        password_file->buffer.reset(password_buffer.release());
-        password_file->length = length;
-    }
-
-    virtual void WritePasswordFile(uint32_t uid, const SizedBuffer &password_file) const {
-        char buf[MAX_UINT_32_CHARS];
-        sprintf(buf, "%u", uid);
-        file_io_->Write(buf, password_file.buffer.get(), password_file.length);
-    }
-
     virtual uint64_t GetNanosecondsSinceBoot() const {
         struct timespec time;
         int res = clock_gettime(CLOCK_MONOTONIC_RAW, &time);
@@ -114,7 +88,6 @@ public:
         return time.tv_nsec;
     }
 private:
-    GateKeeperFileIo *file_io_;
     UniquePtr<uint8_t> key_;
 };
 }

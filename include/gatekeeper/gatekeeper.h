@@ -137,16 +137,6 @@ protected:
             const uint32_t length) const = 0;
 
     /**
-     * Write the password file to persistent storage.
-     */
-    virtual void ReadPasswordFile(uint32_t uid, SizedBuffer *password_file) const = 0;
-
-    /**
-     * Read the password file from persistent storage.
-     */
-    virtual void WritePasswordFile(uint32_t uid, const SizedBuffer &password_file) const = 0;
-
-    /**
      * Get the time since boot in nanoseconds.
      *
      * Should return 0 on error.
@@ -167,12 +157,6 @@ private:
      * Verifies that handle matches password HMAC'ed with the password_key
      */
     bool DoVerify(const password_handle_t *expected_handle, const SizedBuffer &password);
-
-    /**
-     * Verifies that the provided handle matches byte-by-byte what was previously
-     * stored as a result of a call to 'Enroll'
-     */
-    bool ValidatePasswordFile(uint32_t uid, const SizedBuffer &provided_handle);
 
     /**
      * Populates password_handle with the data provided and computes HMAC.
