@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include <UniquePtr.h>
+#include <hardware/hw_auth_token.h>
 
 #include "gatekeeper_messages.h"
 
@@ -26,25 +27,6 @@ namespace gatekeeper {
 
 typedef uint64_t secure_id_t;
 typedef uint64_t salt_t;
-
-/**
- * Data format for an authentication record used to prove
- * successful password verification. Consumed by KeyStore
- * and keymaster to determine CryptoObject availability.
- *
- * All fields are written in network order.
- *
- * TODO: use hw_auth_token_t when Trusty has it
- */
-const uint8_t AUTH_TOKEN_VERSION = 0;
-struct __attribute__ ((__packed__)) AuthToken {
-    uint8_t auth_token_version;
-    secure_id_t root_secure_user_id;
-    secure_id_t auxiliary_secure_user_id;
-    uint32_t authenticator_id;
-    uint32_t timestamp;
-    uint8_t hmac[32];
-};
 
 /**
  * Internal only structure for easy serialization
@@ -92,7 +74,7 @@ protected:
      *
      */
     virtual void GetAuthTokenKey(const uint8_t **auth_token_key, uint32_t *length)
-        const = 0;
+           const = 0;
     /**
      * The key used to sign and verify password data.
      *
@@ -147,7 +129,7 @@ private:
     /**
      * Generates a signed attestation of an authentication event and assings
      * to auth_token UniquePtr.
-     * The format is consistent with that of AuthToken above.
+     * The format is consistent with that of hw_auth_token_t.
      * Also returns the length in length if it is not null.
      */
     void MintAuthToken(UniquePtr<uint8_t> *auth_token, uint32_t *length, uint32_t timestamp,

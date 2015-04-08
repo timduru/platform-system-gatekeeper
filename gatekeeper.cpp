@@ -82,7 +82,7 @@ void GateKeeper::Verify(const VerifyRequest &request, VerifyResponse *response) 
     secure_id_t user_id = password_handle->user_id;
     secure_id_t authenticator_id = password_handle->authenticator_id;
 
-    uint64_t timestamp = GetNanosecondsSinceBoot();
+    uint64_t timestamp = GetNanosecondsSinceBoot() / 1000 / 1000;
 
     if (DoVerify(password_handle, request.provided_password)) {
         // Signature matches
@@ -143,14 +143,15 @@ void GateKeeper::MintAuthToken(UniquePtr<uint8_t> *auth_token, uint32_t *length,
         uint32_t timestamp, secure_id_t user_id, secure_id_t authenticator_id) {
     if (auth_token == NULL) return;
 
-    AuthToken *token = new AuthToken;
+    hw_auth_token_t *token = new hw_auth_token_t;
     SizedBuffer serialized_auth_token;
 
-    token->auth_token_version = AUTH_TOKEN_VERSION;
-    token->root_secure_user_id = user_id;
-    token->auxiliary_secure_user_id = authenticator_id;
-    token->authenticator_id = 0;
-    token->timestamp = timestamp;
+    token->version = HW_AUTH_TOKEN_VERSION;
+    token->challenge = 0; //TODO: take challenge, needed for FP enrollment
+    token->user_id = user_id;
+    token->authenticator_id = authenticator_id;
+    token->authenticator_type = htonl(HW_AUTH_PASSWORD);
+    token->timestamp = htonl(timestamp);
 
     const uint8_t *auth_token_key = NULL;
     uint32_t key_len = 0;
@@ -160,7 +161,7 @@ void GateKeeper::MintAuthToken(UniquePtr<uint8_t> *auth_token, uint32_t *length,
     ComputeSignature(token->hmac, sizeof(token->hmac), auth_token_key, key_len,
             reinterpret_cast<uint8_t *>(token), hash_len);
 
-    if (length != NULL) *length = sizeof(AuthToken);
+    if (length != NULL) *length = sizeof(*token);
     auth_token->reset(reinterpret_cast<uint8_t *>(token));
 }
 
