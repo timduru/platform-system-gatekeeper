@@ -138,9 +138,9 @@ int SoftGateKeeperDevice::Enroll(const struct gatekeeper_device *dev, uint32_t u
 }
 
 int SoftGateKeeperDevice::Verify(const struct gatekeeper_device *dev, uint32_t uid,
-        const uint8_t *enrolled_password_handle, uint32_t enrolled_password_handle_length,
-        const uint8_t *provided_password, uint32_t provided_password_length,
-        uint8_t **auth_token, uint32_t *auth_token_length) {
+        uint64_t challenge, const uint8_t *enrolled_password_handle,
+        uint32_t enrolled_password_handle_length, const uint8_t *provided_password,
+        uint32_t provided_password_length, uint8_t **auth_token, uint32_t *auth_token_length) {
 
     if (dev == NULL || enrolled_password_handle == NULL ||
             provided_password == NULL) {
@@ -148,11 +148,12 @@ int SoftGateKeeperDevice::Verify(const struct gatekeeper_device *dev, uint32_t u
     }
 
     SizedBuffer password_handle_buffer(enrolled_password_handle_length);
-    memcpy(password_handle_buffer.buffer.get(), enrolled_password_handle, enrolled_password_handle_length);
+    memcpy(password_handle_buffer.buffer.get(), enrolled_password_handle,
+            enrolled_password_handle_length);
     SizedBuffer provided_password_buffer(provided_password_length);
     memcpy(provided_password_buffer.buffer.get(), provided_password, provided_password_length);
 
-    VerifyRequest request(uid, &password_handle_buffer, &provided_password_buffer);
+    VerifyRequest request(uid, challenge, &password_handle_buffer, &provided_password_buffer);
     VerifyResponse response;
 
     convert_device(dev)->impl_->Verify(request, &response);

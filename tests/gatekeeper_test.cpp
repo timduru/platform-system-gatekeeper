@@ -71,7 +71,7 @@ TEST(GateKeeperTest, VerifySuccess) {
 
     do_enroll(gatekeeper, &enroll_response);
     ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, enroll_response.error);
-    VerifyRequest request(0, &enroll_response.enrolled_password_handle,
+    VerifyRequest request(0, 1, &enroll_response.enrolled_password_handle,
             &provided_password);
     VerifyResponse response;
 
@@ -83,6 +83,7 @@ TEST(GateKeeperTest, VerifySuccess) {
         reinterpret_cast<hw_auth_token_t *>(response.auth_token.buffer.get());
 
     ASSERT_EQ((uint32_t) HW_AUTH_PASSWORD, auth_token->authenticator_type);
+    ASSERT_EQ((uint64_t) 1, auth_token->challenge);
     ASSERT_NE(~((uint32_t) 0), auth_token->timestamp);
     ASSERT_NE((uint64_t) 0, auth_token->user_id);
     ASSERT_NE((uint64_t) 0, auth_token->authenticator_id);
@@ -108,7 +109,7 @@ TEST(GateKeeperTest, TrustedReEnroll) {
             password_handle.length);
 
     // verify first password
-    VerifyRequest request(0, &enroll_response.enrolled_password_handle,
+    VerifyRequest request(0, 0, &enroll_response.enrolled_password_handle,
             &provided_password);
     VerifyResponse response;
     gatekeeper.Verify(request, &response);
@@ -134,7 +135,7 @@ TEST(GateKeeperTest, TrustedReEnroll) {
     password.buffer.reset(new uint8_t[16]);
     memset(password.buffer.get(), 1, 16);
     password.length = 16;
-    VerifyRequest new_request(0, &enroll_response.enrolled_password_handle,
+    VerifyRequest new_request(0, 0, &enroll_response.enrolled_password_handle,
             &password);
     gatekeeper.Verify(new_request, &response);
     ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, response.error);
@@ -156,7 +157,7 @@ TEST(GateKeeperTest, UntrustedReEnroll) {
     ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, enroll_response.error);
 
     // verify first password
-    VerifyRequest request(0, &enroll_response.enrolled_password_handle,
+    VerifyRequest request(0, 0, &enroll_response.enrolled_password_handle,
             &provided_password);
     VerifyResponse response;
     gatekeeper.Verify(request, &response);
@@ -179,7 +180,7 @@ TEST(GateKeeperTest, UntrustedReEnroll) {
     password.buffer.reset(new uint8_t[16]);
     memset(password.buffer.get(), 1, 16);
     password.length = 16;
-    VerifyRequest new_request(0, &enroll_response.enrolled_password_handle,
+    VerifyRequest new_request(0, 0, &enroll_response.enrolled_password_handle,
             &password);
     gatekeeper.Verify(new_request, &response);
     ASSERT_EQ(::gatekeeper::gatekeeper_error_t::ERROR_NONE, response.error);
@@ -194,7 +195,7 @@ TEST(GateKeeperTest, VerifyBogusData) {
     SizedBuffer password_handle;
     VerifyResponse response;
 
-    VerifyRequest request(0, &provided_password, &password_handle);
+    VerifyRequest request(0, 0, &provided_password, &password_handle);
 
     gatekeeper.Verify(request, &response);
 

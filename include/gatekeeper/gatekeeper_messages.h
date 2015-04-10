@@ -127,6 +127,7 @@ struct GateKeeperMessage {
 struct VerifyRequest : public GateKeeperMessage {
     VerifyRequest(
             uint32_t user_id,
+            uint64_t challenge,
             SizedBuffer *enrolled_password_handle,
             SizedBuffer *provided_password_payload);
     VerifyRequest();
@@ -136,6 +137,7 @@ struct VerifyRequest : public GateKeeperMessage {
     virtual void nonErrorSerialize(uint8_t *buffer) const;
     virtual gatekeeper_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
 
+    uint64_t challenge;
     SizedBuffer password_handle;
     SizedBuffer provided_password;
 };

@@ -63,7 +63,7 @@ TEST_F(GateKeeperDeviceTest, EnrollAndVerify) {
 
     ASSERT_EQ(0, ret);
 
-    ret = device->verify(device, 0, password_handle, password_handle_length,
+    ret = device->verify(device, 0, 0, password_handle, password_handle_length,
             password_payload, password_len, &auth_token, &auth_token_len);
 
     ASSERT_EQ(0, ret);
@@ -85,7 +85,7 @@ TEST_F(GateKeeperDeviceTest, EnrollAndVerifyBadPassword) {
 
     password_payload[0] = 4;
 
-    ret = device->verify(device, 0, password_handle, password_handle_length,
+    ret = device->verify(device, 0, 0, password_handle, password_handle_length,
             password_payload, password_len, &auth_token, &auth_token_len);
 
     ASSERT_NE(0, ret);
@@ -138,6 +138,4 @@ TEST_F(GateKeeperDeviceTest, TrustedReEnroll) {
     handle = reinterpret_cast<password_handle_t *>(password_handle);
     ASSERT_EQ(sid, handle->user_id);
 }
-
-
 

@@ -68,7 +68,7 @@ private:
      * Returns: 0 on success or an error code less than 0 on error
      * On error, verification token will not be allocated
      */
-    static int Verify(const struct gatekeeper_device *dev, uint32_t uid,
+    static int Verify(const struct gatekeeper_device *dev, uint32_t uid, uint64_t challenge,
             const uint8_t *enrolled_password_handle, uint32_t enrolled_password_handle_length,
             const uint8_t *provided_password, uint32_t provided_password_length,
             uint8_t **auth_token, uint32_t *auth_token_length);

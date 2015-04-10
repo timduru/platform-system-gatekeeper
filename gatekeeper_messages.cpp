@@ -110,9 +110,10 @@ gatekeeper_error_t GateKeeperMessage::Deserialize(const uint8_t *payload, const 
 }
 
 
-VerifyRequest::VerifyRequest(uint32_t user_id, SizedBuffer *enrolled_password_handle,
-        SizedBuffer *provided_password_payload) {
+VerifyRequest::VerifyRequest(uint32_t user_id, uint64_t challenge,
+        SizedBuffer *enrolled_password_handle, SizedBuffer *provided_password_payload) {
     this->user_id = user_id;
+    this->challenge = challenge;
     this->password_handle.buffer.reset(enrolled_password_handle->buffer.release());
     this->password_handle.length = enrolled_password_handle->length;
     this->provided_password.buffer.reset(provided_password_payload->buffer.release());
@@ -136,10 +137,13 @@ VerifyRequest::~VerifyRequest() {
 }
 
 uint32_t VerifyRequest::nonErrorSerializedSize() const {
-    return serialized_buffer_size(password_handle) + serialized_buffer_size(provided_password);
+    return sizeof(challenge) + serialized_buffer_size(password_handle)
+            + serialized_buffer_size(provided_password);
 }
 
 void VerifyRequest::nonErrorSerialize(uint8_t *buffer) const {
+    memcpy(buffer, &challenge, sizeof(challenge));
+    buffer += sizeof(challenge);
     append_to_buffer(&buffer, &password_handle);
     append_to_buffer(&buffer, &provided_password);
 }
@@ -155,6 +159,9 @@ gatekeeper_error_t VerifyRequest::nonErrorDeserialize(const uint8_t *payload, co
         memset_s(provided_password.buffer.get(), 0, provided_password.length);
         provided_password.buffer.reset();
     }
+
+    memcpy(&challenge, payload, sizeof(challenge));
+    payload += sizeof(challenge);
 
     error = read_from_buffer(&payload, end, &password_handle);
     if (error != ERROR_NONE) return error;

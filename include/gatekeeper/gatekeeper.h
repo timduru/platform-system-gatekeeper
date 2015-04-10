@@ -133,7 +133,7 @@ private:
      * Also returns the length in length if it is not null.
      */
     void MintAuthToken(UniquePtr<uint8_t> *auth_token, uint32_t *length, uint32_t timestamp,
-            secure_id_t user_id, secure_id_t authenticator_id);
+            secure_id_t user_id, secure_id_t authenticator_id, uint64_t challenge);
 
     /**
      * Verifies that handle matches password HMAC'ed with the password_key

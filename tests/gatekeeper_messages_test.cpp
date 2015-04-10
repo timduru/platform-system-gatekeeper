@@ -167,7 +167,7 @@ TEST(RoundTripTest, VerifyRequest) {
           *password_handle = make_buffer(password_size);
     const SizedBuffer *deserialized_password;
     // create request, serialize, deserialize, and validate
-    VerifyRequest msg(USER_ID, password_handle, provided_password);
+    VerifyRequest msg(USER_ID, 1, password_handle, provided_password);
     SizedBuffer serialized_msg(msg.GetSerializedSize());
     msg.Serialize(serialized_msg.buffer.get(), serialized_msg.buffer.get() + serialized_msg.length);
 
@@ -179,6 +179,7 @@ TEST(RoundTripTest, VerifyRequest) {
             deserialized_msg.error);
 
     ASSERT_EQ(USER_ID, deserialized_msg.user_id);
+    ASSERT_EQ((uint64_t) 1, deserialized_msg.challenge);
     deserialized_password = &deserialized_msg.password_handle;
     ASSERT_EQ((uint32_t) password_size, deserialized_password->length);
     ASSERT_EQ(0, memcmp(msg.provided_password.buffer.get(), deserialized_password->buffer.get(),

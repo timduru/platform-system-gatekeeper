@@ -88,7 +88,7 @@ void GateKeeper::Verify(const VerifyRequest &request, VerifyResponse *response) 
         // Signature matches
         SizedBuffer auth_token;
         MintAuthToken(&auth_token.buffer, &auth_token.length, timestamp,
-                user_id, authenticator_id);
+                user_id, authenticator_id, request.challenge);
         response->SetVerificationToken(&auth_token);
     } else {
         response->error = ERROR_INVALID;
@@ -140,14 +140,15 @@ bool GateKeeper::DoVerify(const password_handle_t *expected_handle, const SizedB
 }
 
 void GateKeeper::MintAuthToken(UniquePtr<uint8_t> *auth_token, uint32_t *length,
-        uint32_t timestamp, secure_id_t user_id, secure_id_t authenticator_id) {
+        uint32_t timestamp, secure_id_t user_id, secure_id_t authenticator_id,
+        uint64_t challenge) {
     if (auth_token == NULL) return;
 
     hw_auth_token_t *token = new hw_auth_token_t;
     SizedBuffer serialized_auth_token;
 
     token->version = HW_AUTH_TOKEN_VERSION;
-    token->challenge = 0; //TODO: take challenge, needed for FP enrollment
+    token->challenge = challenge;
     token->user_id = user_id;
     token->authenticator_id = authenticator_id;
     token->authenticator_type = htonl(HW_AUTH_PASSWORD);
