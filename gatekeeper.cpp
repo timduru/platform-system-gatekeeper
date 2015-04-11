@@ -156,11 +156,13 @@ void GateKeeper::MintAuthToken(UniquePtr<uint8_t> *auth_token, uint32_t *length,
 
     const uint8_t *auth_token_key = NULL;
     uint32_t key_len = 0;
-    GetAuthTokenKey(&auth_token_key, &key_len);
-
-    uint32_t hash_len = (uint32_t)((uint8_t *)&token->hmac - (uint8_t *)token);
-    ComputeSignature(token->hmac, sizeof(token->hmac), auth_token_key, key_len,
-            reinterpret_cast<uint8_t *>(token), hash_len);
+    if (GetAuthTokenKey(&auth_token_key, &key_len)) {
+        uint32_t hash_len = (uint32_t)((uint8_t *)&token->hmac - (uint8_t *)token);
+        ComputeSignature(token->hmac, sizeof(token->hmac), auth_token_key, key_len,
+                reinterpret_cast<uint8_t *>(token), hash_len);
+    } else {
+        memset(token->hmac, 0, sizeof(token->hmac));
+    }
 
     if (length != NULL) *length = sizeof(*token);
     auth_token->reset(reinterpret_cast<uint8_t *>(token));

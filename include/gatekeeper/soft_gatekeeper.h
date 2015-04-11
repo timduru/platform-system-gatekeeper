@@ -49,11 +49,12 @@ public:
     virtual ~SoftGateKeeper() {
     }
 
-    virtual void GetAuthTokenKey(const uint8_t **auth_token_key,
+    virtual bool GetAuthTokenKey(const uint8_t **auth_token_key,
             uint32_t *length) const {
-        if (auth_token_key == NULL || length == NULL) return;
+        if (auth_token_key == NULL || length == NULL) return false;
         *auth_token_key = const_cast<const uint8_t *>(key_.get());
         *length = SIGNATURE_LENGTH_BYTES;
+        return true;
     }
 
     virtual void GetPasswordKey(const uint8_t **password_key, uint32_t *length) {

@@ -72,9 +72,12 @@ protected:
      *
      * Ownership of the auth_token_key pointer is maintained by the implementor.
      *
+     * Returns true if the key was successfully fetched.
+     *
      */
-    virtual void GetAuthTokenKey(const uint8_t **auth_token_key, uint32_t *length)
-           const = 0;
+    virtual bool GetAuthTokenKey(const uint8_t **auth_token_key, uint32_t *length)
+            const = 0;
+
     /**
      * The key used to sign and verify password data.
      *
