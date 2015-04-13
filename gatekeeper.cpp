@@ -140,7 +140,7 @@ bool GateKeeper::DoVerify(const password_handle_t *expected_handle, const SizedB
 }
 
 void GateKeeper::MintAuthToken(UniquePtr<uint8_t> *auth_token, uint32_t *length,
-        uint32_t timestamp, secure_id_t user_id, secure_id_t authenticator_id,
+        uint64_t timestamp, secure_id_t user_id, secure_id_t authenticator_id,
         uint64_t challenge) {
     if (auth_token == NULL) return;
 

@@ -135,7 +135,7 @@ private:
      * The format is consistent with that of hw_auth_token_t.
      * Also returns the length in length if it is not null.
      */
-    void MintAuthToken(UniquePtr<uint8_t> *auth_token, uint32_t *length, uint32_t timestamp,
+    void MintAuthToken(UniquePtr<uint8_t> *auth_token, uint32_t *length, uint64_t timestamp,
             secure_id_t user_id, secure_id_t authenticator_id, uint64_t challenge);
 
     /**
