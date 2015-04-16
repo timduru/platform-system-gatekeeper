@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 #include <UniquePtr.h>
-
 #include <gatekeeper/gatekeeper.h>
 
 namespace gatekeeper {
@@ -109,9 +108,9 @@ bool GateKeeper::CreatePasswordHandle(SizedBuffer *password_handle_buffer, salt_
     password_handle->authenticator_id = authenticator_id;
 
     uint32_t metadata_length = sizeof(user_id) /* user id */
-        + sizeof(authenticator_id) /* auth id */ + sizeof(uint8_t) /* version */;
+        + sizeof(authenticator_id) /* auth id */ + sizeof(HANDLE_VERSION) /* version */;
     uint8_t to_sign[password_length + metadata_length];
-    memcpy(to_sign, &password_handle->version, metadata_length);
+    memcpy(to_sign, password_handle, metadata_length);
     memcpy(to_sign + metadata_length, password, password_length);
 
     const uint8_t *password_key = NULL;

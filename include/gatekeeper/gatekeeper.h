@@ -22,29 +22,9 @@
 #include <hardware/hw_auth_token.h>
 
 #include "gatekeeper_messages.h"
+#include "password_handle.h"
 
 namespace gatekeeper {
-
-typedef uint64_t secure_id_t;
-typedef uint64_t salt_t;
-
-/**
- * Internal only structure for easy serialization
- * and deserialization of password handles.
- *
- * Visible for testing.
- */
-static const uint8_t HANDLE_VERSION = 0;
-struct __attribute__ ((__packed__)) password_handle_t {
-    // fields included in signature
-    uint8_t version;
-    secure_id_t user_id;
-    secure_id_t authenticator_id;
-
-    // fields not included in signature
-    salt_t salt;
-    uint8_t signature[32];
-};
 
 /**
  * Base class for gatekeeper implementations. Provides all functionality except
