@@ -102,11 +102,11 @@ protected:
             const uint32_t length) const = 0;
 
     /**
-     * Get the time since boot in nanoseconds.
+     * Get the time since boot in milliseconds.
      *
      * Should return 0 on error.
      */
-    virtual uint64_t GetNanosecondsSinceBoot() const = 0;
+    virtual uint64_t GetMillisecondsSinceBoot() const = 0;
 
 private:
     /**

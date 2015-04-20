@@ -82,11 +82,11 @@ public:
         memset(signature, 0, signature_length);
     }
 
-    virtual uint64_t GetNanosecondsSinceBoot() const {
+    virtual uint64_t GetMillisecondsSinceBoot() const {
         struct timespec time;
-        int res = clock_gettime(CLOCK_MONOTONIC_RAW, &time);
+        int res = clock_gettime(CLOCK_BOOTTIME, &time);
         if (res < 0) return 0;
-        return time.tv_nsec;
+        return (time.tv_sec * 1000) + (time.tv_nsec / 1000 / 1000);
     }
 private:
     UniquePtr<uint8_t> key_;

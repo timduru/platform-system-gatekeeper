@@ -16,6 +16,8 @@
 #include <UniquePtr.h>
 #include <gatekeeper/gatekeeper.h>
 
+#include <endian.h>
+
 namespace gatekeeper {
 
 void GateKeeper::Enroll(const EnrollRequest &request, EnrollResponse *response) {
@@ -81,7 +83,7 @@ void GateKeeper::Verify(const VerifyRequest &request, VerifyResponse *response) 
     secure_id_t user_id = password_handle->user_id;
     secure_id_t authenticator_id = password_handle->authenticator_id;
 
-    uint64_t timestamp = GetNanosecondsSinceBoot() / 1000 / 1000;
+    uint64_t timestamp = GetMillisecondsSinceBoot();
 
     if (DoVerify(password_handle, request.provided_password)) {
         // Signature matches
@@ -151,7 +153,7 @@ void GateKeeper::MintAuthToken(UniquePtr<uint8_t> *auth_token, uint32_t *length,
     token->user_id = user_id;
     token->authenticator_id = authenticator_id;
     token->authenticator_type = htonl(HW_AUTH_PASSWORD);
-    token->timestamp = htonl(timestamp);
+    token->timestamp = htobe64(timestamp);
 
     const uint8_t *auth_token_key = NULL;
     uint32_t key_len = 0;
