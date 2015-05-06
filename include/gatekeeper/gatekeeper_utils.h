@@ -44,7 +44,7 @@ template <typename T, size_t N> inline size_t array_length(const T (&)[N]) {
     return N;
 }
 
-static int memcmp_s(const void* p1, const void* p2, size_t length) {
+static inline int memcmp_s(const void* p1, const void* p2, size_t length) {
     const uint8_t* s1 = static_cast<const uint8_t*>(p1);
     const uint8_t* s2 = static_cast<const uint8_t*>(p2);
     uint8_t result = 0;

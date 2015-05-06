@@ -95,7 +95,6 @@ uint32_t GateKeeperMessage::Serialize(uint8_t *buffer, const uint8_t *end) const
 }
 
 gatekeeper_error_t GateKeeperMessage::Deserialize(const uint8_t *payload, const uint8_t *end) {
-    uint32_t error_value;
     if (payload + sizeof(uint32_t) > end) return ERROR_INVALID;
     const serial_header_t *header = reinterpret_cast<const serial_header_t *>(payload);
     if (header->error == ERROR_NONE) {
