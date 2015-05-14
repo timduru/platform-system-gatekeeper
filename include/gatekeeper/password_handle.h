@@ -25,7 +25,7 @@ typedef uint64_t salt_t;
  * structure for easy serialization
  * and deserialization of password handles.
  */
-static const uint8_t HANDLE_VERSION = 0;
+static const uint8_t HANDLE_VERSION = 1;
 struct __attribute__ ((__packed__)) password_handle_t {
     // fields included in signature
     uint8_t version;
@@ -35,6 +35,8 @@ struct __attribute__ ((__packed__)) password_handle_t {
     // fields not included in signature
     salt_t salt;
     uint8_t signature[32];
+
+    bool hardware_backed;
 };
 }
 

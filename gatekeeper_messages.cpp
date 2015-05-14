@@ -65,9 +65,14 @@ static inline gatekeeper_error_t read_from_buffer(const uint8_t **buffer, const 
 
 uint32_t GateKeeperMessage::GetSerializedSize() const {
     if (error == ERROR_NONE) {
-        return 2 * sizeof(uint32_t) + nonErrorSerializedSize();
+        uint32_t size = sizeof(serial_header_t) + nonErrorSerializedSize();
+        return size;
     } else {
-        return sizeof(uint32_t);
+        uint32_t size = sizeof(serial_header_t);
+        if (error == ERROR_RETRY) {
+            size += sizeof(retry_timeout);
+        }
+        return size;
     }
 }
 
@@ -79,9 +84,14 @@ uint32_t GateKeeperMessage::Serialize(uint8_t *buffer, const uint8_t *end) const
 
     serial_header_t *header = reinterpret_cast<serial_header_t *>(buffer);
     if (error != ERROR_NONE) {
-        if (buffer + sizeof(error) > end) return 0;
+        if (buffer + sizeof(serial_header_t) > end) return 0;
         header->error = error;
-        bytes_written += sizeof(error);
+        header->user_id = user_id;
+        bytes_written += sizeof(*header);
+        if (error == ERROR_RETRY) {
+            memcpy(buffer + sizeof(serial_header_t), &retry_timeout, sizeof(retry_timeout));
+            bytes_written  += sizeof(retry_timeout);
+        }
     } else {
         if (buffer + sizeof(serial_header_t) + nonErrorSerializedSize() > end)
             return 0;
@@ -103,11 +113,23 @@ gatekeeper_error_t GateKeeperMessage::Deserialize(const uint8_t *payload, const 
         error = nonErrorDeserialize(payload + sizeof(*header), end);
     } else {
         error = static_cast<gatekeeper_error_t>(header->error);
+        user_id = header->user_id;
+        if (error == ERROR_RETRY) {
+            if (payload + sizeof(serial_header_t) < end) {
+                memcpy(&retry_timeout, payload + sizeof(serial_header_t), sizeof(retry_timeout));
+            } else {
+                retry_timeout = 0;
+            }
+        }
     }
 
     return error;
 }
 
+void GateKeeperMessage::SetRetryTimeout(uint32_t retry_timeout) {
+    this->retry_timeout = retry_timeout;
+    this->error = ERROR_RETRY;
+}
 
 VerifyRequest::VerifyRequest(uint32_t user_id, uint64_t challenge,
         SizedBuffer *enrolled_password_handle, SizedBuffer *provided_password_payload) {
@@ -173,6 +195,7 @@ VerifyResponse::VerifyResponse(uint32_t user_id, SizedBuffer *auth_token) {
     this->user_id = user_id;
     this->auth_token.buffer.reset(auth_token->buffer.release());
     this->auth_token.length = auth_token->length;
+    this->request_reenroll = false;
 }
 
 VerifyResponse::VerifyResponse() {
@@ -191,11 +214,12 @@ void VerifyResponse::SetVerificationToken(SizedBuffer *auth_token) {
 }
 
 uint32_t VerifyResponse::nonErrorSerializedSize() const {
-    return serialized_buffer_size(auth_token);
+    return serialized_buffer_size(auth_token) + sizeof(request_reenroll);
 }
 
 void VerifyResponse::nonErrorSerialize(uint8_t *buffer) const {
     append_to_buffer(&buffer, &auth_token);
+    memcpy(buffer, &request_reenroll, sizeof(request_reenroll));
 }
 
 gatekeeper_error_t VerifyResponse::nonErrorDeserialize(const uint8_t *payload, const uint8_t *end) {
@@ -203,7 +227,13 @@ gatekeeper_error_t VerifyResponse::nonErrorDeserialize(const uint8_t *payload, c
         auth_token.buffer.reset();
     }
 
-    return read_from_buffer(&payload, end, &auth_token);
+    gatekeeper_error_t err = read_from_buffer(&payload, end, &auth_token);
+    if (err != ERROR_NONE) {
+        return err;
+    }
+
+    memcpy(&request_reenroll, payload, sizeof(request_reenroll));
+    return ERROR_NONE;
 }
 
 EnrollRequest::EnrollRequest(uint32_t user_id, SizedBuffer *password_handle,

@@ -26,6 +26,12 @@
 
 namespace gatekeeper {
 
+struct __attribute__((packed)) failure_record_t {
+    uint64_t secure_user_id;
+    uint64_t last_checked_timestamp;
+    uint32_t failure_counter;
+};
+
 /**
  * Base class for gatekeeper implementations. Provides all functionality except
  * the ability to create/access keys and compute signatures. These are left up
@@ -108,6 +114,39 @@ protected:
      */
     virtual uint64_t GetMillisecondsSinceBoot() const = 0;
 
+    /**
+     * Returns the value of the current failure record for the user.
+     * The failure record should be written to hardware-backed secure storage, such as
+     * RPMB.
+     *
+     * Returns true on success, false if failure record cannot be retrieved.
+     */
+    virtual bool GetFailureRecord(uint32_t uid, secure_id_t user_id, failure_record_t *record) = 0;
+
+    /**
+     * Clears the failure record for the current user. Returning the counter to 0, or deleting
+     * it entirely.
+     */
+    virtual void ClearFailureRecord(uint32_t uid, secure_id_t user_id) = 0;
+
+    /*
+     * Persists the provided failure record to secure, persistent storage.
+     * Returns true if record was successfully written.
+     */
+    virtual bool WriteFailureRecord(uint32_t uid, failure_record_t *record) = 0;
+
+    /**
+     * Computes the amount of time to throttle the user due to the current failure_record
+     * counter. An implementation is provided by the generic GateKeeper, but may be
+     * overriden.
+     */
+    virtual uint32_t ComputeRetryTimeout(const failure_record_t *record);
+
+    /**
+     * Returns whether the GateKeeper implementation is backed by hardware.
+     */
+    virtual bool IsHardwareBacked() const = 0;
+
 private:
     /**
      * Generates a signed attestation of an authentication event and assings
@@ -127,8 +166,29 @@ private:
      * Populates password_handle with the data provided and computes HMAC.
      */
     bool CreatePasswordHandle(SizedBuffer *password_handle, salt_t salt,
-        secure_id_t secure_id, secure_id_t authenticator_id, const uint8_t *password,
-        uint32_t password_length);
+            secure_id_t secure_id, secure_id_t authenticator_id, uint8_t handle_version,
+            const uint8_t *password, uint32_t password_length);
+
+    /**
+     * Increments the counter on the current failure record for the provided user id.
+     * Sets the last_checked_timestamp to timestamp. Writes the updated record
+     * to *record if not null.
+     *
+     * Returns true if failure record was successfully incremented.
+     */
+    bool IncrementFailureRecord(uint32_t uid, secure_id_t user_id, uint64_t timestamp,
+            failure_record_t *record);
+
+    /**
+     * Determines whether the request is within the current throttle window.
+     *
+     * If the system timer has been reset due to a reboot or otherwise, resets
+     * the throttle window with a base at the current time.
+     *
+     * Returns true if the request is in the throttle window.
+     */
+    bool ThrottleRequest(uint32_t uid, secure_id_t user_id, uint64_t timestamp,
+            failure_record_t *record, GateKeeperMessage *response);
 };
 
 }

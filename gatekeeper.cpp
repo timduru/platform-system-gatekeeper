@@ -28,7 +28,8 @@ void GateKeeper::Enroll(const EnrollRequest &request, EnrollResponse *response) 
         return;
     }
 
-    secure_id_t user_id = 0;
+    secure_id_t user_id = 0;// todo: rename to policy
+    uint32_t uid = request.user_id;
 
     if (request.password_handle.buffer.get() == NULL) {
         // Password handle does not match what is stored, generate new SecureID
@@ -36,14 +37,50 @@ void GateKeeper::Enroll(const EnrollRequest &request, EnrollResponse *response) 
     } else {
         password_handle_t *pw_handle =
             reinterpret_cast<password_handle_t *>(request.password_handle.buffer.get());
-        if (!DoVerify(pw_handle, request.enrolled_password)) {
-            // incorrect old password
+
+        user_id = pw_handle->user_id;
+
+        uint64_t timestamp = GetMillisecondsSinceBoot();
+
+        bool throttle = true;
+        if (pw_handle->version == 0) {
+            // handle version is pre-throttling
+            throttle = false;
+        } else if (pw_handle->version != HANDLE_VERSION) {
             response->error = ERROR_INVALID;
             return;
         }
 
-        user_id = pw_handle->user_id;
+        uint32_t timeout = 0;
+        if (throttle) {
+            failure_record_t record;
+            if (!GetFailureRecord(uid, user_id, &record)) {
+                response->error = ERROR_UNKNOWN;
+                return;
+            }
+
+            if (ThrottleRequest(uid, user_id, timestamp, &record, response)) return;
+
+            if (!IncrementFailureRecord(uid, user_id, timestamp, &record)) {
+                response->error = ERROR_UNKNOWN;
+                return;
+            }
+
+            timeout = ComputeRetryTimeout(&record);
+        }
+
+        if (!DoVerify(pw_handle, request.enrolled_password)) {
+            // incorrect old password
+            if (throttle && timeout > 0) {
+                response->SetRetryTimeout(timeout);
+            } else {
+                response->error = ERROR_INVALID;
+            }
+            return;
+        }
     }
+
+    ClearFailureRecord(uid, user_id);
 
     salt_t salt;
     GetRandom(&salt, sizeof(salt));
@@ -53,8 +90,8 @@ void GateKeeper::Enroll(const EnrollRequest &request, EnrollResponse *response) 
 
 
     SizedBuffer password_handle;
-    if(!CreatePasswordHandle(&password_handle,
-            salt, user_id, authenticator_id, request.provided_password.buffer.get(),
+    if (!CreatePasswordHandle(&password_handle,
+            salt, user_id, authenticator_id, HANDLE_VERSION, request.provided_password.buffer.get(),
             request.provided_password.length)) {
         response->error = ERROR_INVALID;
         return;
@@ -74,16 +111,39 @@ void GateKeeper::Verify(const VerifyRequest &request, VerifyResponse *response) 
     password_handle_t *password_handle = reinterpret_cast<password_handle_t *>(
             request.password_handle.buffer.get());
 
-    // Sanity check
-    if (password_handle->version != HANDLE_VERSION) {
+    bool throttle = true;
+    if (password_handle->version == 0) {
+        // handle version is pre-throttling
+        throttle = false;
+        response->request_reenroll = true;
+    } else if (password_handle->version != HANDLE_VERSION) {
         response->error = ERROR_INVALID;
         return;
     }
 
     secure_id_t user_id = password_handle->user_id;
     secure_id_t authenticator_id = password_handle->authenticator_id;
+    uint32_t uid = request.user_id;
 
     uint64_t timestamp = GetMillisecondsSinceBoot();
+
+    uint32_t timeout = 0;
+    if (throttle) {
+        failure_record_t record;
+        if (!GetFailureRecord(uid, user_id, &record)) {
+            response->error = ERROR_UNKNOWN;
+            return;
+        }
+
+        if (ThrottleRequest(uid, user_id, timestamp, &record, response)) return;
+
+        if (!IncrementFailureRecord(uid, user_id, timestamp, &record)) {
+            response->error = ERROR_UNKNOWN;
+            return;
+        }
+
+        timeout = ComputeRetryTimeout(&record);
+    }
 
     if (DoVerify(password_handle, request.provided_password)) {
         // Signature matches
@@ -91,23 +151,30 @@ void GateKeeper::Verify(const VerifyRequest &request, VerifyResponse *response) 
         MintAuthToken(&auth_token.buffer, &auth_token.length, timestamp,
                 user_id, authenticator_id, request.challenge);
         response->SetVerificationToken(&auth_token);
+        if (throttle) ClearFailureRecord(uid, user_id);
     } else {
-        response->error = ERROR_INVALID;
+        // compute the new timeout given the incremented record
+        if (throttle && timeout > 0) {
+            response->SetRetryTimeout(timeout);
+        } else {
+            response->error = ERROR_INVALID;
+        }
     }
 }
 
 bool GateKeeper::CreatePasswordHandle(SizedBuffer *password_handle_buffer, salt_t salt,
-        secure_id_t user_id, secure_id_t authenticator_id, const uint8_t *password,
+        secure_id_t user_id, secure_id_t authenticator_id, uint8_t handle_version, const uint8_t *password,
         uint32_t password_length) {
     password_handle_buffer->buffer.reset(new uint8_t[sizeof(password_handle_t)]);
     password_handle_buffer->length = sizeof(password_handle_t);
 
     password_handle_t *password_handle = reinterpret_cast<password_handle_t *>(
             password_handle_buffer->buffer.get());
-    password_handle->version = HANDLE_VERSION;
+    password_handle->version = handle_version;
     password_handle->salt = salt;
     password_handle->user_id = user_id;
     password_handle->authenticator_id = authenticator_id;
+    password_handle->hardware_backed = IsHardwareBacked();
 
     uint32_t metadata_length = sizeof(user_id) /* user id */
         + sizeof(authenticator_id) /* auth id */ + sizeof(HANDLE_VERSION) /* version */;
@@ -133,11 +200,15 @@ bool GateKeeper::DoVerify(const password_handle_t *expected_handle, const SizedB
 
     SizedBuffer provided_handle;
     if (!CreatePasswordHandle(&provided_handle, expected_handle->salt, expected_handle->user_id,
-            expected_handle->authenticator_id, password.buffer.get(), password.length)) {
+            expected_handle->authenticator_id, expected_handle->version,
+            password.buffer.get(), password.length)) {
         return false;
     }
 
-    return memcmp_s(provided_handle.buffer.get(), expected_handle, sizeof(*expected_handle)) == 0;
+    password_handle_t *generated_handle =
+            reinterpret_cast<password_handle_t *>(provided_handle.buffer.get());
+    return memcmp_s(generated_handle->signature, expected_handle->signature,
+            sizeof(expected_handle->signature)) == 0;
 }
 
 void GateKeeper::MintAuthToken(UniquePtr<uint8_t> *auth_token, uint32_t *length,
@@ -169,4 +240,52 @@ void GateKeeper::MintAuthToken(UniquePtr<uint8_t> *auth_token, uint32_t *length,
     auth_token->reset(reinterpret_cast<uint8_t *>(token));
 }
 
+uint32_t GateKeeper::ComputeRetryTimeout(const failure_record_t *record) {
+    if (record->failure_counter > 0 && record->failure_counter <= 10) {
+        if (record->failure_counter % 5 == 0) {
+            return 30000;
+        }
+    } else {
+        return 30000;
+    }
+    return 0;
 }
+
+bool GateKeeper::ThrottleRequest(uint32_t uid, secure_id_t user_id, uint64_t timestamp,
+        failure_record_t *record, GateKeeperMessage *response) {
+
+    uint64_t last_checked = record->last_checked_timestamp;
+    uint32_t timeout = ComputeRetryTimeout(record);
+
+    if (timeout > 0) {
+        // we have a pending timeout
+        if (timestamp < last_checked + timeout && timestamp > last_checked) {
+            // attempt before timeout expired, return remaining time
+            response->SetRetryTimeout(timeout - (timestamp - last_checked));
+            return true;
+        } else if (timestamp <= last_checked) {
+            // device was rebooted or timer reset, don't count as new failure but
+            // reset timeout
+            record->last_checked_timestamp = timestamp;
+            if (!WriteFailureRecord(uid, record)) {
+                response->error = ERROR_UNKNOWN;
+                return true;
+            }
+            response->SetRetryTimeout(timeout);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool GateKeeper::IncrementFailureRecord(uint32_t uid, secure_id_t user_id, uint64_t timestamp,
+            failure_record_t *record) {
+    record->secure_user_id = user_id;
+    record->failure_counter++;
+    record->last_checked_timestamp = timestamp;
+
+    return WriteFailureRecord(uid, record);
+}
+} // namespace gatekeeper
+
