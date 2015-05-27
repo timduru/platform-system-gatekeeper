@@ -32,6 +32,8 @@ const uint32_t VERIFY = 1;
 typedef enum {
     ERROR_NONE = 0,
     ERROR_INVALID = 1,
+    ERROR_RETRY = 2,
+    ERROR_UNKNOWN = 3,
 } gatekeeper_error_t;
 
 struct SizedBuffer {
@@ -96,6 +98,13 @@ struct GateKeeperMessage {
     gatekeeper_error_t Deserialize(const uint8_t *payload, const uint8_t *end);
 
     /**
+     * Calls may fail due to throttling. If so, this sets a timeout in milliseconds
+     * for when the caller should attempt the call again. Additionally, sets the
+     * error to ERROR_RETRY.
+     */
+    void SetRetryTimeout(uint32_t retry_timeout);
+
+    /**
      * The following methods are intended to be implemented by subclasses.
      * They are hooks to serialize the elements specific to each particular
      * specialization.
@@ -122,6 +131,7 @@ struct GateKeeperMessage {
 
     gatekeeper_error_t error;
     uint32_t user_id;
+    uint32_t retry_timeout;
 };
 
 struct VerifyRequest : public GateKeeperMessage {
@@ -154,6 +164,7 @@ struct VerifyResponse : public GateKeeperMessage {
     virtual gatekeeper_error_t nonErrorDeserialize(const uint8_t *payload, const uint8_t *end);
 
     SizedBuffer auth_token;
+    bool request_reenroll;
 };
 
 struct EnrollRequest : public GateKeeperMessage {

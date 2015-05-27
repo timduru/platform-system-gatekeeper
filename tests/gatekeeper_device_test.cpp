@@ -63,8 +63,9 @@ TEST_F(GateKeeperDeviceTest, EnrollAndVerify) {
 
     ASSERT_EQ(0, ret);
 
+    bool should_reenroll;
     ret = device->verify(device, 0, 0, password_handle, password_handle_length,
-            password_payload, password_len, &auth_token, &auth_token_len);
+            password_payload, password_len, &auth_token, &auth_token_len, &should_reenroll);
 
     ASSERT_EQ(0, ret);
 }
@@ -85,8 +86,10 @@ TEST_F(GateKeeperDeviceTest, EnrollAndVerifyBadPassword) {
 
     password_payload[0] = 4;
 
+    bool should_reenroll;
     ret = device->verify(device, 0, 0, password_handle, password_handle_length,
-            password_payload, password_len, &auth_token, &auth_token_len);
+            password_payload, password_len, &auth_token, &auth_token_len,
+            &should_reenroll);
 
     ASSERT_NE(0, ret);
     ASSERT_EQ(NULL, auth_token);
