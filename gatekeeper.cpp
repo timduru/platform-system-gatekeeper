@@ -59,7 +59,7 @@ void GateKeeper::Enroll(const EnrollRequest &request, EnrollResponse *response) 
                 return;
             }
 
-            if (ThrottleRequest(uid, user_id, timestamp, &record, response)) return;
+            if (ThrottleRequest(uid, timestamp, &record, response)) return;
 
             if (!IncrementFailureRecord(uid, user_id, timestamp, &record)) {
                 response->error = ERROR_UNKNOWN;
@@ -135,7 +135,7 @@ void GateKeeper::Verify(const VerifyRequest &request, VerifyResponse *response) 
             return;
         }
 
-        if (ThrottleRequest(uid, user_id, timestamp, &record, response)) return;
+        if (ThrottleRequest(uid, timestamp, &record, response)) return;
 
         if (!IncrementFailureRecord(uid, user_id, timestamp, &record)) {
             response->error = ERROR_UNKNOWN;
@@ -251,7 +251,7 @@ uint32_t GateKeeper::ComputeRetryTimeout(const failure_record_t *record) {
     return 0;
 }
 
-bool GateKeeper::ThrottleRequest(uint32_t uid, secure_id_t user_id, uint64_t timestamp,
+bool GateKeeper::ThrottleRequest(uint32_t uid, uint64_t timestamp,
         failure_record_t *record, GateKeeperMessage *response) {
 
     uint64_t last_checked = record->last_checked_timestamp;

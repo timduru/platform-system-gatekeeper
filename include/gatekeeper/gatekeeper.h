@@ -187,7 +187,7 @@ private:
      *
      * Returns true if the request is in the throttle window.
      */
-    bool ThrottleRequest(uint32_t uid, secure_id_t user_id, uint64_t timestamp,
+    bool ThrottleRequest(uint32_t uid, uint64_t timestamp,
             failure_record_t *record, GateKeeperMessage *response);
 };
 
