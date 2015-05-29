@@ -42,7 +42,8 @@ void GateKeeper::Enroll(const EnrollRequest &request, EnrollResponse *response) 
 
         uint64_t timestamp = GetMillisecondsSinceBoot();
 
-        bool throttle = true;
+        // disabled
+        bool throttle = false;
         if (pw_handle->version == 0) {
             // handle version is pre-throttling
             throttle = false;
@@ -111,7 +112,8 @@ void GateKeeper::Verify(const VerifyRequest &request, VerifyResponse *response) 
     password_handle_t *password_handle = reinterpret_cast<password_handle_t *>(
             request.password_handle.buffer.get());
 
-    bool throttle = true;
+    // disabled
+    bool throttle = false;
     if (password_handle->version == 0) {
         // handle version is pre-throttling
         throttle = false;
