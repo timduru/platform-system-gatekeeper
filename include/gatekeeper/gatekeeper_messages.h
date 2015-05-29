@@ -59,12 +59,12 @@ struct SizedBuffer {
      * Takes ownership of the buf pointer, and deallocates it
      * when destructed.
      */
-    SizedBuffer(uint8_t *buf, uint32_t len) {
+    SizedBuffer(uint8_t buf[], uint32_t len) {
         buffer.reset(buf);
         length = len;
     }
 
-    UniquePtr<uint8_t> buffer;
+    UniquePtr<uint8_t[]> buffer;
     uint32_t length;
 };
 
