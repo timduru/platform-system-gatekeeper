@@ -139,6 +139,8 @@ void GateKeeper::Verify(const VerifyRequest &request, VerifyResponse *response) 
         }
 
         timeout = ComputeRetryTimeout(&record);
+    } else {
+        response->request_reenroll = true;
     }
 
     if (DoVerify(password_handle, request.provided_password)) {
