@@ -17,6 +17,10 @@
 #ifndef GATEKEEPER_PASSWORD_HANDLE_H_
 #define GATEKEEPER_PASSWORD_HANDLE_H_
 
+#define HANDLE_FLAG_THROTTLE_SECURE 1
+
+#define HANDLE_VERSION_THROTTLE 2
+
 namespace gatekeeper {
 
 typedef uint64_t secure_id_t;
@@ -25,12 +29,12 @@ typedef uint64_t salt_t;
  * structure for easy serialization
  * and deserialization of password handles.
  */
-static const uint8_t HANDLE_VERSION = 1;
+static const uint8_t HANDLE_VERSION = 2;
 struct __attribute__ ((__packed__)) password_handle_t {
     // fields included in signature
     uint8_t version;
     secure_id_t user_id;
-    secure_id_t authenticator_id;
+    uint64_t flags;
 
     // fields not included in signature
     salt_t salt;
@@ -39,6 +43,5 @@ struct __attribute__ ((__packed__)) password_handle_t {
     bool hardware_backed;
 };
 }
-
 
 #endif // GATEKEEPER_PASSWORD_HANDLE_H_

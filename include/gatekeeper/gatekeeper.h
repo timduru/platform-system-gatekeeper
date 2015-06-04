@@ -116,24 +116,41 @@ protected:
 
     /**
      * Returns the value of the current failure record for the user.
+     *
      * The failure record should be written to hardware-backed secure storage, such as
-     * RPMB.
+     * RPMB, if the target device supports it.
+     *
+     * If 'secure' is false, password is operating in a fallback mode. Implementations
+     * may store the failure record in memory or in non-secure storage if this value is false.
      *
      * Returns true on success, false if failure record cannot be retrieved.
      */
-    virtual bool GetFailureRecord(uint32_t uid, secure_id_t user_id, failure_record_t *record) = 0;
+    virtual bool GetFailureRecord(uint32_t uid, secure_id_t user_id, failure_record_t *record,
+            bool secure) = 0;
 
     /**
-     * Clears the failure record for the current user. Returning the counter to 0, or deleting
-     * it entirely.
+     * Initializes or reinitializes the failure record for the current user.
+     *
+     * Must be persisted in secure storage if the target device supports it.
+     *
+     * If 'secure' is false, password is operating in a fallback mode. Implementations
+     * may store the failure record in memory or in non-secure storage if this value is false.
+     *
+     * Returns true if the failure record was successfully persisted.
      */
-    virtual void ClearFailureRecord(uint32_t uid, secure_id_t user_id) = 0;
+    virtual bool ClearFailureRecord(uint32_t uid, secure_id_t user_id, bool secure) = 0;
 
     /*
-     * Persists the provided failure record to secure, persistent storage.
+     * Writes the provided failure record to persistent storage.
+     *
+     * Must be persisted in secure storage if the target device supports it.
+     *
+     * If 'secure' is false, password is operating in a fallback mode. Implementations
+     * may store the failure record in memory or in non-secure storage if this value is false.
+     *
      * Returns true if record was successfully written.
      */
-    virtual bool WriteFailureRecord(uint32_t uid, failure_record_t *record) = 0;
+    virtual bool WriteFailureRecord(uint32_t uid, failure_record_t *record, bool secure) = 0;
 
     /**
      * Computes the amount of time to throttle the user due to the current failure_record
@@ -177,7 +194,7 @@ private:
      * Returns true if failure record was successfully incremented.
      */
     bool IncrementFailureRecord(uint32_t uid, secure_id_t user_id, uint64_t timestamp,
-            failure_record_t *record);
+            failure_record_t *record, bool secure);
 
     /**
      * Determines whether the request is within the current throttle window.
@@ -188,7 +205,7 @@ private:
      * Returns true if the request is in the throttle window.
      */
     bool ThrottleRequest(uint32_t uid, uint64_t timestamp,
-            failure_record_t *record, GateKeeperMessage *response);
+            failure_record_t *record, bool secure, GateKeeperMessage *response);
 };
 
 }
