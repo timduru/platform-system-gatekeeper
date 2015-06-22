@@ -164,6 +164,11 @@ protected:
      */
     virtual bool IsHardwareBacked() const = 0;
 
+    /**
+     * Verifies that handle matches password HMAC'ed with the password_key
+     */
+    virtual bool DoVerify(const password_handle_t *expected_handle, const SizedBuffer &password);
+
 private:
     /**
      * Generates a signed attestation of an authentication event and assings
@@ -173,11 +178,6 @@ private:
      */
     void MintAuthToken(UniquePtr<uint8_t> *auth_token, uint32_t *length, uint64_t timestamp,
             secure_id_t user_id, secure_id_t authenticator_id, uint64_t challenge);
-
-    /**
-     * Verifies that handle matches password HMAC'ed with the password_key
-     */
-    bool DoVerify(const password_handle_t *expected_handle, const SizedBuffer &password);
 
     /**
      * Populates password_handle with the data provided and computes HMAC.
