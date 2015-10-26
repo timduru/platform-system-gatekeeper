@@ -31,4 +31,17 @@ LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/include
 LOCAL_ADDITIONAL_DEPENDENCIES := $(LOCAL_PATH)/Android.mk
 include $(BUILD_SHARED_LIBRARY)
 
+###
+# libgatekeeper_static is an empty static library that exports
+# all of the files in gatekeeper as includes.
+###
+include $(CLEAR_VARS)
+LOCAL_MODULE := libgatekeeper_static
+LOCAL_EXPORT_C_INCLUDE_DIRS := \
+        $(LOCAL_PATH) \
+        $(LOCAL_PATH)/include
+LOCAL_MODULE_TAGS := optional
+LOCAL_ADDITIONAL_DEPENDENCIES := $(LOCAL_PATH)/Android.mk
+include $(BUILD_STATIC_LIBRARY)
+
 include $(call first-makefiles-under,$(LOCAL_PATH))
