@@ -263,6 +263,8 @@ uint32_t GateKeeper::ComputeRetryTimeout(const failure_record_t *record) {
     if (record->failure_counter > 0 && record->failure_counter <= 10) {
         if (record->failure_counter % 5 == 0) {
             return failure_timeout_ms;
+        }  else {
+            return 0;
         }
     } else if (record->failure_counter < 30) {
         return failure_timeout_ms;

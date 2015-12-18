@@ -170,6 +170,35 @@ TEST_F(GateKeeperDeviceTest, EnrollAndVerifyBadPassword) {
     ASSERT_EQ(NULL, auth_token);
 }
 
+TEST_F(GateKeeperDeviceTest, MinFailedAttemptsBeforeLockout) {
+    uint32_t password_len = 50;
+    uint8_t password_payload[password_len];
+    uint8_t *password_handle;
+    uint32_t password_handle_length;
+    uint8_t *auth_token = NULL;
+    uint32_t auth_token_len;
+    int ret;
+
+    ret = device->enroll(device, 400, NULL, 0, NULL, 0,  password_payload, password_len,
+             &password_handle, &password_handle_length);
+
+    ASSERT_EQ(0, ret);
+
+    password_payload[0] = 4;
+
+    // User should have at least 4 attempts before being locked out
+    static const int MIN_FAILED_ATTEMPTS = 4;
+
+    bool should_reenroll;
+    for (int i = 0; i < MIN_FAILED_ATTEMPTS; i++) {
+        ret = device->verify(device, 400, 0, password_handle, password_handle_length,
+                password_payload, password_len, &auth_token, &auth_token_len,
+                &should_reenroll);
+        // shoudln't be a timeout
+        ASSERT_LT(0, ret);
+    }
+}
+
 TEST_F(GateKeeperDeviceTest, UntrustedReEnroll) {
     uint32_t password_len = 50;
     uint8_t password_payload[password_len];
