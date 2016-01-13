@@ -195,7 +195,7 @@ TEST_F(GateKeeperDeviceTest, MinFailedAttemptsBeforeLockout) {
                 password_payload, password_len, &auth_token, &auth_token_len,
                 &should_reenroll);
         // shoudln't be a timeout
-        ASSERT_LT(0, ret);
+        ASSERT_LT(ret, 0);
     }
 }
 
