@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <endian.h>
 #include <gtest/gtest.h>
 #include <hardware/gatekeeper.h>
 #include <gatekeeper/gatekeeper.h> // For password_handle_t
@@ -97,7 +98,7 @@ TEST_F(GateKeeperDeviceTest, EnrollAndVerify) {
     hat = reinterpret_cast<hw_auth_token_t *>(auth_token);
 
     ASSERT_EQ(HW_AUTH_TOKEN_VERSION, hat->version);
-    ASSERT_EQ(HW_AUTH_PASSWORD, hat->authenticator_type);
+    ASSERT_EQ(htonl(HW_AUTH_PASSWORD), hat->authenticator_type);
 }
 
 TEST_F(GateKeeperDeviceTest, EnrollAndVerifyTimeout) {
